@@ -1,0 +1,61 @@
+VGA Adapter
+
+Many ECE241 students in past years have implemented projects, such as games,
+that require graphical output. The DE1-SoC board supports graphical output
+with a video-out connector that uses the Video Graphics Adapter (VGA)
+standard. This type of graphics interface has been around for several decades,
+and is still popular because it is relatively easy to use. The VGA connector
+requires a circuit called the VGA Adapter that implements the required signals
+and timing that are needed to drive a VGA display. You can download the VGA
+Adapter Verilog code here: . This page provides four example of Verilog
+designs that show you how to use this VGA Adapter. These examples, called
+display_mif, colors, object, and animate, can be downloaded here: .
+
+Example 1: DISPLAY_MIF
+
+The VGA Adapter includes a video-memory module that is used to store an image.  The VGA Adapter continuously sends the contents of this video memory to the video-output port on the DE1-SoC board, allowing the image to be displayed on a VGA monitor. The purpose of this first (very simple) example is just to display the contents of the video memory as a static image on the VGA monitor. The content of the video memory is specified in the Verilog code in the form of a Memory Initialization File (MIF). This file is stored into the video memory as part of the FPGA programming process.
+
+The top-level Verilog file for this example is called vga_demo.v and it uses the VGA Adapter that is found in the folder called vga_adapter. This vga_adapter folder includes four Verilog source-code files that specify the VGA Adapter subcircuit. If you compile the provided vga_demo.qpf project using the Quartus Prime software and then download the resulting circuit into a DE1-SoC board, then the circuit will display the image called rainbow_640_9.mif on the VGA output. This MIF file has a resolution of 640x480 pixels, with 9-bit color and is found in the vga_adapter folder.  It is the default background image used by the VGA Adapter, and displays all of the colors of the rainbow that can be made using a 9-bit color depth.
+
+If you open the vga_demo.v file, your will see a commented-out line of code that illustrates how the displayed image can be changed. Remove the // comments at the start of this statement (Line 57 in the file), and then recompile the project. Now, downloading the resulting circuit will display the file named bmp_640_9.mif on the VGA output. This image can be found in the MIF folder included with this example.
+
+You can alternatively display the contents of any MIF file that has the correct resolution of 640x480 pixels with a color-depth of 9 bits. You can generate such an image by using the program named bmp_to_mif, which can be downloaded here: .  This program is written in the C language and can translate any 24-bit-color bitmap (.bmp) file (which is a standard type of image file) into a MIF file. 
+
+A second version of this example is provided called display_mif_pro. In this version the top-level file vga_demo.v has parameters that allow you to select one of three VGA resolutions: 640x480, 320x240, and 160x120 pixels. Also, a parameter is provided that lets you select one of three color-depths: 3, 6, and 9-bit color. You can experiment with these settings to see what the displayed images look like on the VGA monitor at different resolutions and color depths.
+
+Example 1: DESim version of Display_MIF
+
+A version of the display_mif example that works in the DESim application can be downloaded here: . This example includes a vga_adapter folder that provides a simulated version of the DE1-SoC board VGA Adapter. It displays images in the VGA Display window within the DESim graphical user interface (GUI).  The code is parameterized to support different VGA resolutions in DESim, and different color depths.  When running this example in DESim make sure that you set the resolution in the VGA Window so that it matches whatever resolution is set by the parameters in vga_demo.v. The VGA Window in DESim is compatible with any color depth up to 24-bit color.
+
+Example 2: COLORS
+
+The colors example does the following. First, it displays the default background image rainbow_640_9.mif. Then, this example allows you to draw a colored rectangle that is centered on the screen. You can set the color and size of the rectangle by following the instructions given at the top of the file vga_demo.v.
+
+A second version of this example is called colors_pro.zip. It includes parameters that allow you to select one of three VGA resolutions: 640x480, 320x240, and 160x120 pixels. Also, a parameter is provided that lets you select one of three color-depths: 3, 6, and 9-bit color. You can experiment with these settings to see what the displayed background and rectangle look like on the VGA monitor at different resolutions and color depths.
+
+Example 2: DESim version of COLORS
+
+A version of the colors example that works in the DESim application can be downloaded here: . This example includes a vga_adapter folder that provides a simulated version of the DE1-SoC board VGA Adapter. It displays images in the VGA Display window within the DESim graphical user interface (GUI). To run this example you have to set the resolution of the VGA Display window within DESim to 604x480. The code is parameterized to support different VGA resolutions in DESim and different color depths.
+
+Example 3: OBJECT
+
+Some students will want to draw objects on the VGA screen, such as some shape needed for a game. One way to do this is to store the object in a small (read-only) on-chip memory, in the FPGA, that is initialized by a memory-initialization file. Background information about creating on-chip memories is provided in the optional Memory Lab (optional).
+
+An example of a Quartus project that can draw such an object anywhere on the screen is provided below. This example draws two objects on the VGA display: one is a green box with a red background and the other object is an colored circle. This example works with a resolution of 640x480 and 9-bit color.
+
+Instructions for using The object example are provided at the top of its vga_demo.v Verilog file. The objects can be moved around on the VGA display by pressing keys on a PS/2 keyboard that is plugged into the DE1-SoC board. 
+
+A second version of this example is called colors_pro.zip. In this version the top-level file vga_demo.v has parameters that allow you to select one of three VGA resolutions: 640x480, 320x240, and 160x120 pixels. Also, a parameter is provided that lets you select one of three color-depths: 3, 6, and 9-bit color. You can experiment with these settings to see what the displayed background and rectangle look like on the VGA monitor at different resolutions and color depths.
+
+Example 3: DESim version of OBJECT
+
+You can download a version of the object example that runs in the DESim application here: . This version works identically to the DE1-SoC version, except that you move the objects around in the VGA Display window in the DESim GUI by using the PS/2 Keyboard window in the DESim GUI.
+The code is paramterized to support three resolutions and color depths. 
+
+Example 4: ANIMATE
+
+Some of you will want to make animations (objects moving around) on the VGA screen as part of your project. An example of a Quartus project that creates a simple animation is given in the animate example. This circuit draws two objects on the screen, which are small horizontal lines. These two objects move up/down to the top/bottom edges of the screen, appearing to bounce off these edges and reverse directions. The color of each object and its speed of movement can be controlled by following the instructions given at the top of the vga_demo.v Verilog file. Note that this example also displays a background image on the VGA output, which looks like checkboard patterns on the left and right sides of the display. 
+
+Example 4: DESim version of ANIMATE
+
+You can download a version of the animate example that runs in the DESim application here: . This version works identically to the DE1-SoC version. It is paramterized to support three resolutions and color depths. 
