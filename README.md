@@ -1,4 +1,5 @@
-# ece241-final-project
-Final project for ece241
+# RISC-V CPU
 
-Repository name and readme will be changed after this project has been thoroughly chosen. 
+A simple 32-bit CPU following the RISC-V ISA. 
+
+Project is intended as a deep learning exercise to strenghten our knowledge of both digital logic and computer architecture. 
