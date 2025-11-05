@@ -1,9 +1,10 @@
-module control_unit(SW, LEDR, KEY, HEX0);
+module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   // Hardware I/O
   input [9:0] SW;    // Machine code expressed on switches.
   input [1:0] KEY;   // Clock pulse
   output [9:0] LEDR; // LEDR used to display register values (first 4 bits of R1 and R2).
   output [6:0] HEX0;
+  output [6:0] HEX1;
  
   // Clock pulse and reset
   wire clock_pulse = KEY[0];
@@ -47,25 +48,25 @@ module control_unit(SW, LEDR, KEY, HEX0);
   //ALU alu_inst(mode, opcode, register_value_1, register_value_2, execute_flag, arithmetic_result);
  
   // Display R1 on the hex display.
-  display_hex hex_displayer(R1, HEX0);
-   
+  display_hex hex_displayer1(R1, HEX0);
+  display_hex hex_displayer2(R2, HEX1);
   // Next-state + dedicated stage logic: On each clock pulse, go to the next stage of the fetch-execute loop.
   always @ (posedge clock_pulse, negedge resetn) begin // account for resetn? then it just turns everything to 0.
     if (!resetn) begin
-mode <= 0;
-opcode <= 0;
-register_encoding_1 <= 0;
-register_encoding_2 <= 0;
-register_value_1 <= 0;
-register_value_2 <= 0;
-//execute_flag <= 0;
+      mode <= 0;
+      opcode <= 0;
+      register_encoding_1 <= 0;
+      register_encoding_2 <= 0;
+      register_value_1 <= 0;
+      register_value_2 <= 0;
+      //execute_flag <= 0;
 
-R1 <= 0;
-R2 <= 0;
-IR <= 0;
-end
-else begin
-case (present_state)
+      R1 <= 0;
+      R2 <= 0;
+      IR <= 0;
+    end
+    else begin
+    case (present_state)
       F: begin
         IR <= SW[7:0]; // Copying the current command into the instruction register
         next_state = D;
@@ -84,16 +85,16 @@ case (present_state)
       end
       E: begin
  // ALU Logic!
- case (opcode)
-ADD: begin
- arithmetic_result = register_value_1 + register_value_2;
-  end
-INC: begin
- arithmetic_result = register_value_1 + 1;
-         end
- endcase
- next_state = W;
-end
+        case (opcode)
+        ADD: begin
+          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 : register_value_2 + (register_encoding_2 == 2'b00) ? register_value_1 : register_value_2;
+        end
+        INC: begin
+          arithmetic_result = (IR[1:0] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
+        end
+        endcase
+        next_state = W;
+      end
       W: begin
         if (register_encoding_1 == 2'b00)
           R1 <= arithmetic_result;
@@ -192,3 +193,4 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
             temp = 7'b1111111;  // display off (invalid input)
     end
 endmodule
+
