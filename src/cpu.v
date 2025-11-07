@@ -15,13 +15,13 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   reg [31:0] R2;
   reg [7:0] IR; // Special-purpose instruction register.
  
-    // Creating readable constants to represent each state.
+  // Creating readable constants to represent each state.
   // (F)etch, (D)ecode, (E)xecute, (W)riteback
   parameter [1:0] F = 2'b00,
                   D = 2'b01,
                   E = 2'b10,
                   W = 2'b11;
-
+ 
   parameter [2:0] ADD = 3'b001,
                   INC = 3'b011;
  
@@ -51,7 +51,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   display_hex hex_displayer1(R1, HEX0);
   display_hex hex_displayer2(R2, HEX1);
   // Next-state + dedicated stage logic: On each clock pulse, go to the next stage of the fetch-execute loop.
-  always @ (posedge clock_pulse, negedge resetn) begin // account for resetn? then it just turns everything to 0.
+  always @ (negedge clock_pulse, negedge resetn) begin // account for resetn? then it just turns everything to 0.
     if (!resetn) begin
       mode <= 0;
       opcode <= 0;
@@ -60,7 +60,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       register_value_1 <= 0;
       register_value_2 <= 0;
       //execute_flag <= 0;
-
+ 
       R1 <= 0;
       R2 <= 0;
       IR <= 0;
@@ -84,10 +84,10 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
         next_state = E;
       end
       E: begin
- // ALU Logic!
+// ALU Logic!
         case (opcode)
         ADD: begin
-          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 : register_value_2 + (register_encoding_2 == 2'b00) ? register_value_1 : register_value_2;
+          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 : register_value_2 + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
         end
         INC: begin
           arithmetic_result = (IR[1:0] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
@@ -105,7 +105,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       default: next_state = F;
     endcase end
 end
-
+ 
 // State Flip-Flops
 always @ (posedge clock_pulse, negedge resetn) begin
 if (!resetn)
@@ -113,7 +113,7 @@ present_state <= F;
 else
 present_state <= next_state;
 end
-
+ 
 // assign LEDR values to the current state value.
 assign LEDR[1:0] = present_state;
 assign LEDR[9:2] = opcode;
@@ -151,11 +151,11 @@ endmodule
 //      endcase
 //  end
 //endmodule
-
+ 
 module display_hex(input [3:0] dig, output [6:0] HEX);
     reg [6:0] temp;
     assign HEX = temp;   // connect internal signal to output
-
+ 
     always @ (*) begin
         if (dig == 4'h0)
             temp = 7'b1000000;  // 0
@@ -193,4 +193,3 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
             temp = 7'b1111111;  // display off (invalid input)
     end
 endmodule
-
