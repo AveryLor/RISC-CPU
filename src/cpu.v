@@ -87,7 +87,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
 // ALU Logic!
         case (opcode)
         ADD: begin
-          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 : register_value_2 + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
+          arithmetic_result = ((IR[3:2] == 2'b00) ? register_value_1 : register_value_2) + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
         end
         INC: begin
           arithmetic_result = (IR[1:0] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
