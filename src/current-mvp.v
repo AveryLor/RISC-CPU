@@ -1,3 +1,7 @@
+/* 
+ * Functioning Control unit & ALU code for milestone 1
+ */
+
 module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   // Hardware I/O
   input [9:0] SW;    // Machine code expressed on switches.
