@@ -112,10 +112,10 @@ end
  
 // State Flip-Flops
 always @ (posedge clock_pulse, negedge resetn) begin
-if (!resetn)
-present_state <= F;
-else
-present_state <= next_state;
+  if (!resetn)
+    present_state <= F;
+  else
+    present_state <= next_state;
 end
  
 // assign LEDR values to the current state value.
