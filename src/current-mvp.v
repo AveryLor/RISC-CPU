@@ -1,6 +1,3 @@
-/* 
- * Functioning Control unit & ALU code for milestone 1
- */
 
 module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   // Hardware I/O
@@ -88,13 +85,13 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
         next_state = E;
       end
       E: begin
-      // ALU Logic!
+// ALU Logic!
         case (opcode)
         ADD: begin
           arithmetic_result = ((IR[3:2] == 2'b00) ? register_value_1 : register_value_2) + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
         end
-        INC: begin 
-          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
+        INC: begin
+          arithmetic_result = register_value_1 + 1; 
         end
         endcase
         next_state = W;
@@ -112,17 +109,51 @@ end
  
 // State Flip-Flops
 always @ (posedge clock_pulse, negedge resetn) begin
-  if (!resetn)
-    present_state <= F;
-  else
-    present_state <= next_state;
+if (!resetn)
+present_state <= F;
+else
+present_state <= next_state;
 end
  
 // assign LEDR values to the current state value.
 assign LEDR[1:0] = present_state;
 assign LEDR[9:2] = opcode;
 endmodule
- module display_hex(input [3:0] dig, output [6:0] HEX);
+ 
+/*
+   Capable of performing two instructions:
+    - add regA, regB (Adds values in regA and regB, then place tha value in regA)
+    - inc reg (adds 1 to value inside of reg, then copies it back.)
+ */
+//module ALU(mode, opcode, register_value_1, register_value_2, execute_flag, result);
+//  input mode;
+//  input execute_flag;
+//  input [2:0] opcode;
+//  input [31:0] register_value_1;
+//  input [31:0] register_value_2;
+//
+//  output reg [31:0] result; // first two bits are the destination register, rest are the actual result.
+//
+//  parameter [2:0] ADD = 3'b001,
+//                  INC = 3'b011;
+//
+//  // The ALU will only fire up once it is given the OK by the execute flag.
+//  always @ (posedge execute_flag) begin // experiment with posedge execute_flag.
+//    result = 32'b1;
+//    //if (execute_flag)
+//      case (opcode)
+//        ADD: begin
+//          result = register_value_1 + register_value_2;
+//        end
+//
+//        INC: begin
+//          result = register_value_1 + 1;
+//        end
+//      endcase
+//  end
+//endmodule
+ 
+module display_hex(input [3:0] dig, output [6:0] HEX);
     reg [6:0] temp;
     assign HEX = temp;   // connect internal signal to output
  
@@ -162,4 +193,4 @@ endmodule
         else
             temp = 7'b1111111;  // display off (invalid input)
     end
-endmodule  
+endmodule
