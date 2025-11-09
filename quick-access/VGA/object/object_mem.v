@@ -1,12 +1,11 @@
 module object_mem (address, clock, q);
     parameter n = 3;    // memory width
     parameter Mn = 6;   // address bits
-    parameter INIT_FILE = "rainbow_160_12.mif";
+    parameter INIT_FILE = "./MIF/object_mem_8_8_3.mif";
 
-	input [Mn-1:0] address;
-	input clock;
+	input wire [Mn-1:0] address;
+	input wire clock;
 	output [n-1:0]  q;
-	wire clock;
 	wire [n-1:0] sub_wire0;
 	wire [n-1:0] q = sub_wire0[n-1:0];
 
