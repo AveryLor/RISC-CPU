@@ -88,13 +88,13 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
         next_state = E;
       end
       E: begin
-// ALU Logic!
+      // ALU Logic!
         case (opcode)
         ADD: begin
           arithmetic_result = ((IR[3:2] == 2'b00) ? register_value_1 : register_value_2) + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
         end
-        INC: begin
-          arithmetic_result = (IR[1:0] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
+        INC: begin 
+          arithmetic_result = (IR[3:2] == 2'b00) ? register_value_1 + 1 : register_value_2 + 1;
         end
         endcase
         next_state = W;
@@ -122,8 +122,7 @@ end
 assign LEDR[1:0] = present_state;
 assign LEDR[9:2] = opcode;
 endmodule
- 
-module display_hex(input [3:0] dig, output [6:0] HEX);
+ module display_hex(input [3:0] dig, output [6:0] HEX);
     reg [6:0] temp;
     assign HEX = temp;   // connect internal signal to output
  
@@ -163,4 +162,4 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
         else
             temp = 7'b1111111;  // display off (invalid input)
     end
-endmodule
+endmodule  
