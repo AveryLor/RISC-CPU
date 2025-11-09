@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/averylor/Desktop/ResumeProjects/RISC-V-CPU/MIF_c/bmp_to_mif",
+      "program": "/Users/averylor/Desktop/ResumeProjects/RISC-V-CPU/MIF_c/bmp_to_mif/build/Debug/outDebug"
+    }
+  ]
+}
