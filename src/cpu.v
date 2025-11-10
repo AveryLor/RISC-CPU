@@ -45,7 +45,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   wire [31:0] arithmetic_result;
  
   // ALU instance
-  ALU alu_inst(execute_flag, clock_pulse, LEDR[9], IR, opcode, arithmetic_result, register_value_1, register_value_2);
+  ALU alu_inst(opcode, arithmetic_result, register_value_1, register_value_2);
  
   // Display R1 on the hex display.
   display_hex hex_displayer1(R1, HEX0);
@@ -60,7 +60,6 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       register_encoding_2 <= 0;
       register_value_1 <= 0;
       register_value_2 <= 0;
-      execute_flag <= 0;
  
       R1 <= 0;
       R2 <= 0;
@@ -83,10 +82,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
         register_value_2 <= (IR[1:0]== 2'b00) ? R1 : R2;
  
         next_state = E;
-        execute_flag <= 1;
       end
-      E: begin
-        execute_flag <= 0;
+      E: begin 
         next_state = W;
       end
       W: begin
@@ -114,30 +111,20 @@ endmodule
 
 /* This is the ALU module */
 /* Capable of performing ADD and INC instructions */
-module ALU(execute_flag, clock, light, IR, opcode, arithmetic_result, register_value_1, register_value_2);
+module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
   parameter [2:0] ADD = 3'b001,
                   INC = 3'b011;
-  input [7:0] IR;
 
-  input execute_flag;
-  input clock;
   input [2:0] opcode;
   input [31:0] register_value_1;
   input [31:0] register_value_2;
   
-  output reg light;
   output reg [31:0] arithmetic_result;
-
-  always @ (negedge clock) begin
-    if (execute_flag) begin
-      light <= 1;
-      case (opcode) 
-      ADD: arithmetic_result = ((IR[3:2] == 2'b00) ? register_value_1 : register_value_2) + ((IR[1:0] == 2'b00) ? register_value_1 : register_value_2);
-      INC: arithmetic_result = register_value_1 + 1; 
-      endcase
-    end
-    else 
-      light <= 0;
+  always @ (*) begin
+    case (opcode) 
+      ADD: arithmetic_result <= register_value_1 + register_value_2; 
+      INC: arithmetic_result <= register_value_1 + 1; 
+    endcase
   end
 endmodule
 
