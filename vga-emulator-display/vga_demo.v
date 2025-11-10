@@ -22,8 +22,8 @@ module vga_demo(CLOCK_50, SW, KEY, LEDR, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
     parameter A = 2'b00, B = 2'b01, C = 2'b10, D = 2'b11;
 
     input CLOCK_50;    
-    input [9:0] SW;
-    input [3:0] KEY;
+    input [9:0] SW; // Switches currently control color 
+    input [3:0] KEY; // Key control's interface state
     output [9:0] LEDR;
     output [6:0] HEX2, HEX1, HEX0;
     output [7:0] VGA_R;
@@ -44,6 +44,9 @@ module vga_demo(CLOCK_50, SW, KEY, LEDR, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
     wire go;                        // used by FSM
     reg write, Lxc, Lyc, Exc, Eyc;  // box control signals
     reg [1:0] y_Q, Y_D;             // FSM
+
+    state codes for FSM that choses how to draw at a given time
+    parameter A = 2'b00, B = 2'b01, C = 2'b10, D = 2'b11;
     
     // use offsets to center the box on the VGA display
     parameter X_OFFSET = 320;
@@ -79,6 +82,29 @@ module vga_demo(CLOCK_50, SW, KEY, LEDR, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
 
     assign go = ~KEY[3];
 
+    // Add box centers
+    reg [nX-1:0] box_x [0:7];
+    initial begin
+        box_x[0]=40; box_x[1]=120; box_x[2]=200; box_x[3]=280;
+        box_x[4]=360; box_x[5]=440; box_x[6]=520; box_x[7]=600;
+    end
+
+    reg [2:0] box_index;
+
+    // At reset
+    always @(posedge CLOCK_50 or negedge KEY[0])
+        if (!KEY[0]) box_index <= 0;
+        else if (y_Q == D) begin
+            if (box_index == 7)
+                box_index <= 0;
+            else
+                box_index <= box_index + 1;
+        end
+
+    // Replace fixed center X/Y with current box’s center
+    assign X0 = box_x[box_index];
+    assign Y0 = 240;
+
     // FSM state table
     always @ (*)
         case (y_Q)
@@ -91,6 +117,7 @@ module vga_demo(CLOCK_50, SW, KEY, LEDR, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
             D:  Y_D = A;
         endcase
     // FSM outputs
+    
     always @ (*)
     begin
         // default assignments
@@ -103,6 +130,7 @@ module vga_demo(CLOCK_50, SW, KEY, LEDR, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
         endcase
     end
 
+    // FSM state table for assigning new state codes
     always @(posedge CLOCK_50)
         if (!KEY[0])
             y_Q <= 2'b0;
