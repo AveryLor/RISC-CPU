@@ -7,9 +7,7 @@ module testbench ( );
     reg CLOCK_50;	
 	reg [9:0] SW;
 	reg [3:0] KEY;
-	wire [9:0] LEDR;
-    tri ps2_clk, ps2_dat;
-    wire [6:0] HEX5, HEX4, HEX3, HEX2, HEX1, HEX0;
+    wire [6:0] HEX3, HEX2, HEX1, HEX0;
 	wire [7:0] VGA_R;
 	wire [7:0] VGA_G;
 	wire [7:0] VGA_B;
@@ -28,13 +26,21 @@ module testbench ( );
 	end
 	
 	initial begin
-        KEY <= 4'b1110; SW <= 8'b01001000;  // randomly chosen
-        #20 KEY[0] <= 1'b1; // done reset
-        #160 KEY[1] <= 1'b0;
-        #20 KEY[1] <= 1'b1; // press to shown object
+        KEY <= 4'b0;
+        #20 KEY[0] <= 1'b1; // reset
 	end // initial
 
-	vga_demo U1 (CLOCK_50, SW, KEY, LEDR, ps2_clk, ps2_dat, HEX5, HEX4, HEX3, HEX2, HEX1, HEX0, 
-                 VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+	initial begin
+        KEY[1] <= 1'b1; KEY[2] <= 1'b1; KEY[3] <= 1'b1; SW <= 10'b100;
+        #200 KEY[1] <= 1'b0; // press
+        #20 KEY[1] <= 1'b1;
+        #20 KEY[2] <= 1'b0;
+        #20 KEY[2] <= 1'b1;
+        #20 KEY[3] <= 1'b0;
+        #20 KEY[3] <= 1'b1; // plot red pixl at (4,4)
+	end // initial
+
+	vga_demo U1 (CLOCK_50, SW, KEY[3:0], HEX3, HEX2, HEX1, HEX0, VGA_R, VGA_G, VGA_B,
+				VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
 
 endmodule

@@ -6,7 +6,7 @@ JedecChain;
 	P ActionCode(Ign)
 		Device PartName(SOCVHPS) MfrSpec(OpMask(0));
 	P ActionCode(Cfg)
-		Device PartName(5CSEMA5F31) Path("C:/Users/profb/Dropbox/UofT/Courses/ece241_25/Labs/Project/DE1-SoC/object_640x480x9/") File("vga_demo.sof") MfrSpec(OpMask(1));
+		Device PartName(5CSEMA5F31) Path("C:/Users/profb/Dropbox/UofT/Courses/ece241_25/Labs/Project/DE1-SoC/colors_640x480x9/") File("vga_demo.sof") MfrSpec(OpMask(1));
 
 ChainEnd;
 

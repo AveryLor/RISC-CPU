@@ -12,24 +12,11 @@ add wave -noupdate -label VGA_BLANK_N -radix binary /testbench/VGA_BLANK_N
 add wave -noupdate -label VGA_SYNC_N -radix binary /testbench/VGA_SYNC_N
 add wave -noupdate -label VGA_CLK -radix binary /testbench/VGA_CLK
 add wave -noupdate -divider vga_demo
-add wave -noupdate -label Packet -radix hexadecimal /testbench/U1/Packet
-add wave -noupdate -label Serial -radix hexadecimal /testbench/U1/Serial
-add wave -noupdate -label O1_O2 -radix binary /testbench/U1/O1_O2
-add wave -noupdate -label object_sel -radix binary /testbench/U1/object_sel
-add wave -noupdate -divider object1
-add wave -noupdate -label x -radix hexadecimal /testbench/U1/O1/X
-add wave -noupdate -label y -radix hexadecimal /testbench/U1/O1/Y
-add wave -noupdate -label go -radix hexadecimal /testbench/U1/O1/go
-add wave -noupdate -label xC -radix hexadecimal /testbench/U1/O1/XC
-add wave -noupdate -label yC -radix hexadecimal /testbench/U1/O1/YC
-add wave -noupdate -label plot -radix hexadecimal /testbench/U1/O1/VGA_write
-add wave -noupdate -label object_address -radix hexadecimal /testbench/U1/O1/U6/address
-add wave -noupdate -label object_color -radix hexadecimal /testbench/U1/O1/U6/q
+add wave -noupdate -label color -radix binary /testbench/U1/color
+add wave -noupdate -label x -radix hexadecimal /testbench/U1/X
+add wave -noupdate -label y -radix hexadecimal /testbench/U1/Y
 add wave -noupdate -divider vga_adapter
-add wave -noupdate -label color -radix hexadecimal /testbench/U1/VGA/color
-add wave -noupdate -label x -radix hexadecimal /testbench/U1/VGA/x
-add wave -noupdate -label y -radix hexadecimal /testbench/U1/VGA/y
-add wave -noupdate -label write -radix hexadecimal /testbench/U1/VGA/write
+add wave -noupdate -label write -radix binary /testbench/U1/VGA/write
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {10000 ps} 0}
 quietly wave cursor active 1

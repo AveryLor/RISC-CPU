@@ -13,7 +13,7 @@ if {[file exists MIF]} {
 vlib work;
 
 # compile the Verilog source code in the parent folder
-vlog ../vga_demo.v ../object_mem.v ../vga_adapter/*.v
+vlog ../vga_demo.v ../vga_adapter/*.v
 # compile the Verilog code of the testbench
 vlog *.v
 # start the Simulator, including some libraries that may be needed
