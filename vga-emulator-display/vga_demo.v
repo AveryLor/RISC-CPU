@@ -156,6 +156,7 @@ module Up_count (R, Clock, Resetn, L, E, Q);
             Q <= Q + 1'b1;
 endmodule
 
+// Will display hex values on the screen
 module hex7seg (hex, display);
     input [3:0] hex;
     output [6:0] display;
