@@ -11,7 +11,7 @@ module control_unit_tb;
   wire [6:0] HEX0;
   wire [6:0] HEX1;
 
-  // Instantiate the DUT
+  // Instantiate DUT
   control_unit dut (
     .SW(SW),
     .KEY(KEY),
@@ -20,57 +20,63 @@ module control_unit_tb;
     .HEX1(HEX1)
   );
 
-  // Clock generation: KEY[0] is the clock
+  // Clock generation on KEY[0]
   initial begin
     KEY[0] = 0;
-    forever #5 KEY[0] = ~KEY[0];   // 10 ns period
+    forever #5 KEY[0] = ~KEY[0]; // 10 ns period
   end
 
-  // Stimulus
+  // Main stimulus
   initial begin
-    // start with reset asserted
+    // Hold reset low
     KEY[1] = 0;     // resetn = 0
     SW     = 10'b0;
     #20;
     KEY[1] = 1;     // release reset
 
-    // Instruction format (for your design):
-    // bit7 = mode (unused here, keep 0)
+    // Instruction encoding (as per your comment):
+    // bit7 = mode (we keep 0)
     // bits6:4 = opcode
-    // bits3:2 = dest/source register
-    // bits1:0 = second source register
+    // bits3:2 = RegA (destination)
+    // bits1:0 = RegB (second source)
+    //
+    // Your ALU supports:
+    // ADD = 3'b001
+    // INC = 3'b011
 
-    // 1. INC R1
-    // opcode = 3'b011
-    // dest = 00 (R1)
-    // src2 = 00 (does not matter for INC)
-    // instruction = 0_011_00_00 = 8'h30
+    // 1) INC R1
+    // 0_011_00_00 = 8'h30
     SW[7:0] = 8'h30;
-    #80;   // let the FSM go through F, D, E, W
+    // let FSM do F, D, E, W → about 4 cycles.
+    // Our clock is 10 ns, so 40–80 ns is safe. Use 80 to be relaxed.
+    #80;
 
-    // 2. INC R1 again
+    // 2) INC R1 again
     SW[7:0] = 8'h30;
     #80;
 
-    // At this point R1 should be 2
+    // Now R1 should be 2.
 
-    // 3. ADD R1, R1 -> R1
-    // opcode = 3'b001
-    // dest = 00 (R1)
-    // src2 = 00 (R1)
-    // instruction = 0_001_00_00 = 8'h10
+    // 3) ADD R1, R1 -> R1
+    // 0_001_00_00 = 8'h10
     SW[7:0] = 8'h10;
     #80;
 
-    // After this, R1 should be 4 because it added R1 to R1
+    // At this point, since R1 was 2, ADD R1+R1 should give 4 into R1.
 
-    // Show results in transcript
-    $display("Time %0t: R1 = %0d, R2 = %0d, state = %0d",
+    // Print out internal values
+    $display("t=%0t FINAL: R1=%0d R2=%0d state=%0d",
               $time, dut.R1, dut.R2, dut.present_state);
 
-    // Keep some time to look at waveforms
     #50;
     $stop;
+  end
+
+  // Optional live monitor
+  initial begin
+    $monitor("t=%0t clk=%b rstn=%b SW=%h state=%0d R1=%0d R2=%0d",
+              $time, KEY[0], KEY[1], SW[7:0],
+              dut.present_state, dut.R1, dut.R2);
   end
 
 endmodule
