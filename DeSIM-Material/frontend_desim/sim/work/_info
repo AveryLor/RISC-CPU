@@ -9,21 +9,21 @@ z2
 cModel Technology
 Z0 dC:/Users/avery/WorkProjects/RISC-V-CPU/DeSIM-Material/frontend_desim/sim
 vseven_segment_char_gen
-Z1 !s110 1762835619
+Z1 !s110 1762837121
 !i10b 1
-!s100 T^@aa_QJd3V;EjW6bUnmT3
-ImNXZ_h5KKo0PaiOM6YfdI0
+!s100 jj7P@LTLYe7`KhKICEN3d0
+IzZbn7S6[4H;[=^E1Tcj2d0
 Z2 VDg1SIo80bB@j0V0VzS_@n1
 R0
-Z3 w1762835618
+Z3 w1762837120
 Z4 8../vga_demo.v
 Z5 F../vga_demo.v
-L0 141
+L0 84
 Z6 OV;L;10.5b;63
 r1
 !s85 0
 31
-Z7 !s108 1762835619.000000
+Z7 !s108 1762837121.000000
 Z8 !s107 ..\resolution.v|../vga_demo.v|../top.v|../resolution.v|
 Z9 !s90 ../resolution.v|../top.v|../vga_demo.v|
 !i113 1
@@ -71,8 +71,8 @@ R10
 vvga_demo
 R1
 !i10b 1
-!s100 PJ9?`:QdPkD;X3C<A?Ek30
-IL;BDXdLFd62Z?OnL5ZOQ51
+!s100 O^SlBTGG1ok6_U8Xfl:zM3
+IK<jZ`cT4K9EMiD@zkGFg>2
 R2
 R0
 R3

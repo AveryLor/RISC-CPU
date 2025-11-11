@@ -10,7 +10,8 @@ module vga_demo(
     
     // Outputs to the top module
     output [23:0] VGA_COLOR, // 24-bit color (8R, 8G, 8B)
-    output plot              // Plot enable (high if within visible screen area)
+    output plot,              // Plot enable (high if within visible screen area)
+    input [0:0] KEY
 );
 
     // Drawing parameters
@@ -48,94 +49,36 @@ module vga_demo(
     // Output from the character generator (8 registers = 8 bits for label, 8 bits for value)
     wire [7:0] p_Label; 
     wire [7:0] p_Value; 
-    
-    defparam VGA.BACKGROUND_IMAGE = "./MIF/bmp_640_9.mif" ;
-    
-    // Generate Register Labels (digit 0 through 7)
-    genvar i;
-    generate
-        for (i = 0; i < 8; i = i + 1) begin : reg_label_gen
-            seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-            LABEL_INST (
-                .x_in(draw_x),
-                .y_in(draw_y),
-                .x_origin(X_LABEL + TEXT_X_OFFSET), 
-                .y_origin(Y_BASE + i * BOX_HEIGHT + TEXT_Y_OFFSET),    
-                .digit(i), // Display the digit i (for Ri)
-                .draw_pixel(p_Label[i])
-            );
-        end
-    endgenerate
 
-    // Generate Register Values (R0 through R7)
-    // Using a concatenation trick to easily index the 4-bit registers
-    wire [31:0] all_regs = {R7, R6, R5, R4, R3, R2, R1, R0};
+    wire [8:0] color;        // used as placeholder.
+    wire [nX-1:0] X;         // used as placeholder
+    wire [nY-1:0] Y;         // used as placeholder
+    wire write;              // used as placeholder
     
-    generate
-        for (i = 0; i < 8; i = i + 1) begin : reg_value_gen
-            seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-            VALUE_INST (
-                .x_in(draw_x),
-                .y_in(draw_y),
-                .x_origin(X_VALUE + TEXT_X_OFFSET),
-                .y_origin(Y_BASE + i * BOX_HEIGHT + TEXT_Y_OFFSET),
-                .digit(all_regs[i*4 +: 4]), // Get the 4-bit value for register Ri
-                .draw_pixel(p_Value[i])
-            );
-        end
-    endgenerate
+    assign color = 0;
+    assign X = 0;
+    assign Y = 0;
+    assign write = 0;
 
-    // --- Pixel Color Generation ---
-    always @(*) begin
-        pixel_color_9bit = BACK_COLOR; // Default to black
-        
-        // --- 1. Draw the Grid ---
-        if (
-            // Check vertical range (for R0 to R7)
-            (draw_y >= Y_START && draw_y < Y_START + 8 * BOX_HEIGHT) &&
-            
-            // Check horizontal range (for Label and Value columns combined)
-            (draw_x >= X_LABEL && draw_x < X_VALUE + BOX_WIDTH)
-        ) begin
-            
-            // Check for horizontal dividers (Top, bottom of R0-R7)
-            if ( (draw_y == Y_START) || ((draw_y - Y_START) % BOX_HEIGHT == BOX_HEIGHT - 1) ) begin
-                pixel_color_9bit = LINE_COLOR;
-            end
-            
-            // Check for vertical dividers (Left, center, right)
-            if ( (draw_x == X_LABEL) || (draw_x == X_VALUE - 1) || (draw_x == X_VALUE + BOX_WIDTH - 1) ) begin
-                 pixel_color_9bit = LINE_COLOR;
-            end
-        end
-
-        // --- 2. Draw the Register Data (overwrites grid lines) ---
-        
-        // Draw the Register Labels (e.g., '0' for R0, '1' for R1, etc.)
-        if (|p_Label) begin
-            pixel_color_9bit = LABEL_COLOR;
-        end
-        
-        // Draw the Register Values (e.g., 4-bit R0 value, R1 value, etc.)
-        if (|p_Value) begin
-            pixel_color_9bit = DATA_COLOR;
-        end
-        
-    end
     
-    // --- Plot Enable and 24-bit Color Assignment ---
-    
-    // Plot is high when we are in the visible grid area
-    assign plot = (draw_y >= Y_START && draw_y < Y_START + 8 * BOX_HEIGHT) &&
-                  (draw_x >= X_LABEL && draw_x < X_VALUE + BOX_WIDTH);
-                  
-    // Convert 9-bit (3:3:3) internal color to 24-bit (8:8:8) output
-    assign VGA_COLOR = {
-        {pixel_color_9bit[8:6], pixel_color_9bit[8:6], pixel_color_9bit[8]}, // Red (8 bits)
-        {pixel_color_9bit[5:3], pixel_color_9bit[5:3], pixel_color_9bit[5]}, // Green (8 bits)
-        {pixel_color_9bit[2:0], pixel_color_9bit[2:0], pixel_color_9bit[2]}  // Blue (8 bits)
-    };
-
+    defparam VGA_ADAPT.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif" ;
+    // instantiate the VGA adapter
+    vga_adapter VGA (
+        .resetn(KEY[0]),
+        .clock(CLOCK_50),
+        .color(color),
+        .x(X),
+        .y(Y),
+        .write(write),
+        .VGA_R(VGA_R),
+        .VGA_G(VGA_G),
+        .VGA_B(VGA_B),
+        .VGA_HS(VGA_HS),
+        .VGA_VS(VGA_VS),
+        .VGA_BLANK_N(VGA_BLANK_N),
+        .VGA_SYNC_N(VGA_SYNC_N),
+        .VGA_CLK(VGA_CLK)
+    );
 endmodule
 
 module seven_segment_char_gen (
