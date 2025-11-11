@@ -88,7 +88,7 @@ void draw_image (struct pixel * data)
     struct pixel (*image)[width] = (struct pixel (*)[width]) data; // allow image[][]
 
     char file_name[80];
-    sprintf (file_name, "bmp_%d_%d.mif", COLS, COLOR_DEPTH);
+    sprintf (file_name, "../../assets/mif/bmp_%d_%d.mif", COLS, COLOR_DEPTH);
     fp = fopen (file_name, "w");
     fprintf (fp, "WIDTH=%d;\n", COLOR_DEPTH);
     fprintf (fp, "DEPTH=%d;\n\n", COLS * ROWS);
