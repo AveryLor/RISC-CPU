@@ -1,241 +1,75 @@
-// This module displays the values of 8 registres (assuming 4-bit data)
-// onto the VGA screen, using existing box structures 
-// The values are displayed as 7 segment style hexadecimal digits
-module vga_demo(CLOCK_50, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
-    // Required signals for the VGA to work properly 
-    input CLOCK_50; 
-    output [7:0] VGA_R; 
-    output [7:0] VGA_G; 
-    output [7:0] VGA_B; 
-    output VGA_HS; 
-    output VGA_VS; 
-    output VGA_BLANK_N; 
-    output VGA_SYNC_N; 
-    output VGA_CLK; 
+// vga_demo.v - Refactored drawing logic module
+// This module takes VGA coordinates and register values, and determines the pixel color.
 
-    // External reg file inputs
-    input [3:0] R1; 
-    input [3:0] R2; 
-    input [3:0] R3; 
-    // input [3:0] R4; Not yet used
-    // input [3:0] R5; 
-    // input [3:0] R6; 
-    // input [3:0] R7; 
-    // input [3:0] R8; 
+module vga_demo(
+    input [9:0] draw_x,     // Horizontal coordinate
+    input [8:0] draw_y,     // Vertical coordinate
+    
+    // Register file data inputs
+    input [3:0] R0, R1, R2, R3, R4, R5, R6, R7,
+    
+    // Outputs to the top module
+    output [23:0] VGA_COLOR, // 24-bit color (8R, 8G, 8B)
+    output plot,              // Plot enable (high if within visible screen area)
+    input [0:0] KEY
+);
 
     // Drawing parameters
     parameter nX = 10;
     parameter nY = 9; 
 
-    // Define color scheme 
+    // Define color scheme (9-bit internally: 3R, 3G, 3B)
     parameter LINE_COLOR = 9'b111111111; // Bright white line
-    parameter DATA_COLOR = 9'b111000000; // Data values are in red
-    parameter BLACK_COLOR = 9'b000000000; // Black background 
-
-    // VGA drawing coordaintes 
-    wire [nX-1:0] draw_x; 
-    wire [nY-1:0] draw_y; 
-    reg [8:0] pixel_color; // The final pixel color output 
+    parameter DATA_COLOR = 9'b111000000; // Data values are bright red
+    parameter LABEL_COLOR = 9'b000111000; // Label values are bright green
+    parameter BACK_COLOR = 9'b000000000; // Black background 
+    
+    reg [8:0] pixel_color_9bit; // The final pixel color output (9-bit internal) 
 
     // Box and positioning parameters 
     parameter BOX_WIDTH = 64; 
-    parameter BOX_HEIGT = 38; 
+    parameter BOX_HEIGHT = 38; 
     parameter X_START = 40; 
     parameter Y_START = 40; 
     parameter SPACING = 72; // Horizontal spacing between box centers
-    parameter CHAR_PIXEL_WIDTH = 5; // Width of one character segment
+    
+    // Text rendering parameters
+    parameter CHAR_PIXEL_WIDTH = 5; 
+    parameter CHAR_PIXEL_HEIGHT = 7; 
+    parameter TEXT_X_OFFSET = 10; 
+    parameter TEXT_Y_OFFSET = 10;
     
     // Y coordinates for the 8 registers (R0-R7)
-    parameter Y_BASE = Y_START; // Starting Y coordinate for R0
-    parameter Y_R0 = Y_BASE + 0 * BOX_HEIGHT;
-    parameter Y_R1 = Y_BASE + 1 * BOX_HEIGHT;
-    parameter Y_R2 = Y_BASE + 2 * BOX_HEIGHT;
-    parameter Y_R3 = Y_BASE + 3 * BOX_HEIGHT;
-    parameter Y_R4 = Y_BASE + 4 * BOX_HEIGHT;
-    parameter Y_R5 = Y_BASE + 5 * BOX_HEIGHT;
-    parameter Y_R6 = Y_BASE + 6 * BOX_HEIGHT;
-    parameter Y_R7 = Y_BASE + 7 * BOX_HEIGHT;
-
+    parameter Y_BASE = Y_START; 
+    
     // X coordinates for the Register Label (Rx) and Data (Value)
-    parameter X_LABEL = X_START; // X position for 'R0', 'R1', etc.
-    parameter X_VALUE = X_START + SPACING; // X position for the value
+    parameter X_LABEL = X_START; 
+    parameter X_VALUE = X_START + BOX_WIDTH; // X_VALUE is now the start of the data box
 
-    // Output from the character generator: 1 if the pixel should be drawn for the character
-    // We need one draw_pixel wire for the LABEL (e.g., '0' for R0)
+    // Output from the character generator (8 registers = 8 bits for label, 8 bits for value)
     wire [7:0] p_Label; 
-    // We need one draw_pixel wire for the VALUE (e.g., R0 value)
     wire [7:0] p_Value; 
-    
-    // --- Instance Array for Register Values (Single Digit) ---
-    // R0 Label (digit '0') and Value (R0)    
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R0_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 0*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd0),            // Display the digit 0 (for R0)
-        .draw_pixel(p_Label[0])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R0_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 0*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R0),            // Use the 4-bit value of R0
-        .draw_pixel(p_Value[0])
-    );
-    
-    // R1 Label (digit '1') and Value (R1)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R1_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 1*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd1),
-        .draw_pixel(p_Label[1])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R1_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 1*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R1),
-        .draw_pixel(p_Value[1])
-    );
-    
-    // R2 Label (digit '2') and Value (R2)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R2_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 2*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd2),
-        .draw_pixel(p_Label[2])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R2_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 2*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R2),
-        .draw_pixel(p_Value[2])
-    );
 
-    // R3 Label (digit '3') and Value (R3)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R3_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 3*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd3),
-        .draw_pixel(p_Label[3])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R3_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 3*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R3),
-        .draw_pixel(p_Value[3])
-    );
+    wire [8:0] color;        // used as placeholder.
+    wire [nX-1:0] X;         // used as placeholder
+    wire [nY-1:0] Y;         // used as placeholder
+    wire write;              // used as placeholder
     
-    // R4 Label (digit '4') and Value (R4)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R4_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 4*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd4),
-        .draw_pixel(p_Label[4])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R4_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 4*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R4),
-        .draw_pixel(p_Value[4])
-    );
-    
-    // R5 Label (digit '5') and Value (R5)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R5_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 5*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd5),
-        .draw_pixel(p_Label[5])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R5_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 5*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R5),
-        .draw_pixel(p_Value[5])
-    );
-    
-    // R6 Label (digit '6') and Value (R6)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R6_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 6*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd6),
-        .draw_pixel(p_Label[6])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R6_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 6*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R6),
-        .draw_pixel(p_Value[6])
-    );
-    
-    // R7 Label (digit '7') and Value (R7)
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT)) 
-    R7_LABEL_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_LABEL + TEXT_X_OFFSET), 
-        .y_origin(Y_START + 7*BOX_HEIGHT + TEXT_Y_OFFSET),    
-        .digit(4'd7),
-        .draw_pixel(p_Label[7])
-    );
-    seven_segment_char_gen #(.CHAR_W(CHAR_PIXEL_WIDTH), .CHAR_H(CHAR_PIXEL_HEIGHT))
-    R7_VALUE_INST (
-        .x_in(draw_x),
-        .y_in(draw_y),
-        .x_origin(X_VALUE + TEXT_X_OFFSET),
-        .y_origin(Y_START + 7*BOX_HEIGHT + TEXT_Y_OFFSET),
-        .digit(R7),
-        .draw_pixel(p_Value[7])
-    );
+    assign color = 0;
+    assign X = 0;
+    assign Y = 0;
+    assign write = 0;
 
-
-    // VGA adapter instantiation
-    vga_adapter VGA_OUT (
-        .resetn(1'b1),
+    
+    
+    // instantiate the VGA adapter
+    vga_adapter VGA (
+        .resetn(KEY[0]),
         .clock(CLOCK_50),
-        .color(pixel_color),
-        .x(draw_x),
-        .y(draw_y),
-        .write(1'b1),
+        .color(color),
+        .x(X),
+        .y(Y),
+        .write(write),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),
@@ -245,53 +79,8 @@ module vga_demo(CLOCK_50, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_
         .VGA_SYNC_N(VGA_SYNC_N),
         .VGA_CLK(VGA_CLK)
     );
-    
-    // --- Pixel Color Generation ---
-    always @(*) begin
-        pixel_color = BACK_COLOR; // Default to black
-        
-        // --- 1. Draw the Grid ---
-        if (
-            // Check vertical range (for R0 to R7)
-            (draw_y >= Y_START && draw_y < Y_START + 8 * BOX_HEIGHT) &&
-            
-            // Check horizontal range (for Label and Value columns combined)
-            (draw_x >= X_LABEL && draw_x < X_VALUE + BOX_WIDTH)
-        ) begin
-            
-            // Check for horizontal dividers (Top edge of R0, and bottom edge of R0-R7)
-            // (draw_y == Y_START) is the top border
-            // ((draw_y - Y_START) % BOX_HEIGHT == BOX_HEIGHT - 1) is the bottom border of each row
-            if ( (draw_y == Y_START) || ((draw_y - Y_START) % BOX_HEIGHT == BOX_HEIGHT - 1) ) begin
-                // Draw horizontal line
-                pixel_color = LINE_COLOR;
-            end
-            
-            // Check for vertical dividers (Left edge of R0 and Right edge of Label/Value columns)
-            // draw_x == X_LABEL is the left border
-            // draw_x == X_LABEL + BOX_WIDTH - 1 is the center line
-            // draw_x == X_VALUE + BOX_WIDTH - 1 is the right border
-            if ( (draw_x == X_LABEL) || (draw_x == X_LABEL + BOX_WIDTH - 1) || (draw_x == X_VALUE + BOX_WIDTH - 1) ) begin
-                 // Draw vertical line
-                pixel_color = LINE_COLOR;
-            end
-        end
-
-        // --- 2. Draw the Register Data (overwrites grid lines if necessary) ---
-        
-        // Draw the Register Labels (e.g., '0' for R0, '1' for R1, etc.)
-        if (|p_Label) begin
-            pixel_color = LABEL_COLOR;
-        end
-        
-        // Draw the Register Values (e.g., 4-bit R0 value, R1 value, etc.)
-        if (|p_Value) begin
-            pixel_color = DATA_COLOR;
-        end
-        
-    end
+    defparam VGA_ADAPT.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif" ;
 endmodule
-
 
 module seven_segment_char_gen (
     input [9:0] x_in, y_in, // Current VGA coordinates (must match draw_x/y width)
@@ -331,7 +120,7 @@ module seven_segment_char_gen (
     wire seg_G = (y_local >= 3 && y_local < 4) && (x_local >= 1) && (x_local <= 3); 
 
     // Look-up table to determine which segments should be lit for the given digit
-    wire [6:0] segments_on; // [A, B, C, D, E, F, G]
+    reg [6:0] segments_on; // [A, B, C, D, E, F, G]
 
     // 7-segment decoding logic for Hex digits (0-F)
     always @(*) begin

@@ -3,11 +3,13 @@
   "configurations": [
     {
       "name": "C/C++ Runner: Debug Session",
-      "type": "lldb",
+      "type": "cppvsdbg",
       "request": "launch",
       "args": [],
-      "cwd": "/Users/averylor/Desktop/ResumeProjects/RISC-V-CPU/MIF_c/bmp_to_mif",
-      "program": "/Users/averylor/Desktop/ResumeProjects/RISC-V-CPU/MIF_c/bmp_to_mif/build/Debug/outDebug"
+      "stopAtEntry": false,
+      "console": "externalTerminal",
+      "cwd": "c:/Users/avery/WorkProjects/RISC-V-CPU/bmp_to_mif",
+      "program": "c:/Users/avery/WorkProjects/RISC-V-CPU/bmp_to_mif/build/Debug/outDebug"
     }
   ]
 }
