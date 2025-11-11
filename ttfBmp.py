@@ -2,7 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 # Path to your .ttf file
-font_path = 'path/to/your/font.ttf'
+font_path = './Minecraftia-Regular.ttf'
 
 # Set up output directory
 output_dir = 'output_bmp_files'
