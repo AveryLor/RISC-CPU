@@ -69,17 +69,17 @@ module vga_demo(CLOCK_50, KEY, LEDR, VGA_X, VGA_Y, VGA_COLOR, plot);
         // choose background image according to resolution and color depth
 		defparam VGA.BACKGROUND_IMAGE = 
             (RESOLUTION == "640x480") ?
-                ((COLOR_DEPTH == 9) ? "./mif/0_bmp_160_6.mif" :
-                ((COLOR_DEPTH == 6) ? "./mif/0_bmp_160_6.mif" :
+                ((COLOR_DEPTH == 9) ? "./mif/reg_bmp_160_6.mif" :
+                ((COLOR_DEPTH == 6) ? "./mif/reg_bmp_160_6.mif" :
                 "./MIF/bmp_640_3.mif")) : 
             ((RESOLUTION == "320x240") ?
-                ((COLOR_DEPTH == 9) ? "./mif/0_bmp_160_6.mif" :
-                ((COLOR_DEPTH == 6) ? "./mif/0_bmp_160_6.mif" :
+                ((COLOR_DEPTH == 9) ? "./mif/reg_bmp_160_6.mif" :
+                ((COLOR_DEPTH == 6) ? "./mif/reg_bmp_160_6.mif" :
                 "./MIF/bmp_320_3.mif")) : 
                     // 160x120
-                    ((COLOR_DEPTH == 9) ? "./mif/0_bmp_160_6.mif" :
-                    ((COLOR_DEPTH == 6) ? "./mif/0_bmp_160_6.mif" :
-                    "./mif/0_bmp_160_6.mif")));
+                    ((COLOR_DEPTH == 9) ? "./mif/reg_bmp_160_6.mif" :
+                    ((COLOR_DEPTH == 6) ? "./mif/reg_bmp_160_6.mif" :
+                    "./mif/reg_bmp_160_6.mif")));
 		defparam VGA.COLOR_DEPTH = COLOR_DEPTH;
         
         assign LEDR[9] = VGA_SYNC;      // turn on LED when background drawing is done
