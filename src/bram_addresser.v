@@ -12,6 +12,7 @@ module bram_addresser (
 	wire store; // 1: storing in memory, 0: loading from memory
 	assign store = memory_access_code[0];
 	wire [3:0] byte_enable; // determines which 4 bytes will be written or stored
+	assign byte_enable = memory_access_code[4:1];
 
 	// Each B-RAM uses a 16 bit address and loads/stores bytes
 	wire [15:0] B_address [3:0];	// 4 addresses for loading/storing up to 4 bytes
