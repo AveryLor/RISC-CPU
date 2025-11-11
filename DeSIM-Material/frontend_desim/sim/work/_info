@@ -1,0 +1,90 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/avery/WorkProjects/RISC-V-CPU/DeSIM-Material/frontend_desim/sim
+vseven_segment_char_gen
+Z1 !s110 1762835619
+!i10b 1
+!s100 T^@aa_QJd3V;EjW6bUnmT3
+ImNXZ_h5KKo0PaiOM6YfdI0
+Z2 VDg1SIo80bB@j0V0VzS_@n1
+R0
+Z3 w1762835618
+Z4 8../vga_demo.v
+Z5 F../vga_demo.v
+L0 141
+Z6 OV;L;10.5b;63
+r1
+!s85 0
+31
+Z7 !s108 1762835619.000000
+Z8 !s107 ..\resolution.v|../vga_demo.v|../top.v|../resolution.v|
+Z9 !s90 ../resolution.v|../top.v|../vga_demo.v|
+!i113 1
+Z10 tCvgOpt 0
+vtb
+R1
+!i10b 1
+!s100 hWhbRE]=<?BR`]dn4FLI42
+IMoV_T]Jc3E2U[07RZSEn=0
+R2
+R0
+w1762835175
+8../tb/tb.v
+F../tb/tb.v
+L0 6
+R6
+r1
+!s85 0
+31
+R7
+!s107 ../tb/tb.v|
+!s90 ../tb/tb.v|
+!i113 1
+R10
+vtop
+R1
+!i10b 1
+!s100 _LaiQzf:g5=_PIbCX?3Lc2
+IjRYL2`FNXh1_6TN[^VJ5j0
+R2
+R0
+w1762835106
+8../top.v
+F../top.v
+L0 3
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_demo
+R1
+!i10b 1
+!s100 PJ9?`:QdPkD;X3C<A?Ek30
+IL;BDXdLFd62Z?OnL5ZOQ51
+R2
+R0
+R3
+R4
+R5
+L0 4
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10

@@ -1,0 +1,140 @@
+# vsim -pli "C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi" -Lf 220model -Lf altera_mf_ver -Lf verilog -t 1ns -c -do "run -all" tb 
+# Start time: 23:33:51 on Nov 10,2025
+# Loading work.tb
+# Loading work.top
+# Loading work.vga_demo
+# Loading work.seven_segment_char_gen
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (10) does not match connection size (1) for port 'draw_x'. The port definition is at: ../vga_demo.v(5).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (9) does not match connection size (4) for port 'draw_y'. The port definition is at: ../vga_demo.v(6).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R0'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R1'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R2'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R3'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R4'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (7) for port 'R5'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (10) for port 'R6'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../top.v(21): [PCDPC] - Port size (4) does not match connection size (9) for port 'R7'. The port definition is at: ../vga_demo.v(9).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[0]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[0]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[0]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[0]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[1]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[1]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[1]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[1]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[2]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[2]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[2]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[2]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[3]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[3]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[3]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[3]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[4]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[4]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[4]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[4]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[5]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[5]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[5]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[5]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[6]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[6]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[6]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[6]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[7]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[7]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[7]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(59): [PCDPC] - Port size (4) does not match connection size (32) for port 'digit'. The port definition is at: ../vga_demo.v(144).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_label_gen[7]/LABEL_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[0]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[0]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[0]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[1]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[1]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[1]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[2]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[2]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[2]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[3]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[3]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[3]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[4]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[4]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[4]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[5]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[5]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[5]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[6]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[6]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[6]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (9) for port 'y_in'. The port definition is at: ../vga_demo.v(142).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[7]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'x_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[7]/VALUE_INST File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(77): [PCDPC] - Port size (10) does not match connection size (32) for port 'y_origin'. The port definition is at: ../vga_demo.v(143).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[7]/VALUE_INST File: ../vga_demo.v
+# Loading C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi
+# run -all
