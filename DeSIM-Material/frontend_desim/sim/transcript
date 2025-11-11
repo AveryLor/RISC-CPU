@@ -138,3 +138,7 @@
 #    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/reg_value_gen[7]/VALUE_INST File: ../vga_demo.v
 # Loading C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi
 # run -all
+# Time scaling: 0.0001 sim seconds per real-time second
+# 
+# 
+# Connected to server!
