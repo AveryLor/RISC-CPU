@@ -1,0 +1,29 @@
+# vsim -pli "C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi" -Lf 220model -Lf altera_mf_ver -Lf verilog -t 1ns -c -do "run -all" tb 
+# Start time: 01:39:57 on Nov 12,2025
+# Loading work.tb
+# Loading work.top
+# Loading work.vga_demo
+# Loading work.vga_writer
+# Loading work.one_char_counter
+# Loading work.char_index_fsm
+# Loading work.char_bitmap
+# Loading work.vga_adapter
+# Loading work.vga_convert
+# ** Error: (vsim-3389) ../top.v(20): Port 'SW' not found in the connected module (3rd connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Error: (vsim-3389) ../top.v(20): Port 'write' not found in the connected module (4th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_X' not found in the connected module (5th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_Y' not found in the connected module (6th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_COLOR' not found in the connected module (7th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Error: (vsim-3389) ../top.v(20): Port 'plot' not found in the connected module (8th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Fatal: (vsim-3365) ../top.v(20): Too many port connections. Expected 13, found 16.
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# FATAL ERROR while loading design
+# Error loading design
+# End time: 01:39:57 on Nov 12,2025, Elapsed time: 0:00:00
+# Errors: 7, Warnings: 0

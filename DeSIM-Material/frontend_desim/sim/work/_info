@@ -1,0 +1,250 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/avery/WorkProjects/RISC-V-CPU/DeSIM-Material/frontend_desim/sim
+vchar_bitmap
+Z1 !s110 1762929595
+!i10b 1
+!s100 BV<Y9aRB<<QL?PJieY5Ch1
+Izm<0hR@5MVPj0I:2oB3mm3
+Z2 VDg1SIo80bB@j0V0VzS_@n1
+R0
+Z3 w1762929593
+Z4 8../vga_demo.v
+Z5 F../vga_demo.v
+L0 236
+Z6 OV;L;10.5b;63
+r1
+!s85 0
+31
+Z7 !s108 1762929595.000000
+Z8 !s107 ../vga_adapter/vga_controller.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_adapter.v|../vga_demo.v|../top.v|
+Z9 !s90 ../top.v|../vga_demo.v|../vga_adapter/vga_adapter.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_controller.v|
+!i113 1
+Z10 tCvgOpt 0
+vchar_index_fsm
+R1
+!i10b 1
+!s100 ^zz>F??c=N]?ildHdi0JJ1
+Iai4?]4SN^WiI_iBX3KbcT1
+R2
+R0
+R3
+R4
+R5
+L0 185
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vone_char_counter
+R1
+!i10b 1
+!s100 Y[0RR06ki4dK@B0;3YYzK0
+IDcbb501]zzEFV]>k<lc8d2
+R2
+R0
+R3
+R4
+R5
+L0 211
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vtb
+R1
+!i10b 1
+!s100 Om6JE9GDPLU?I2V1oL1@M3
+IoZk2AOP8XPkS?zj7C;dME0
+R2
+R0
+w1762929504
+8../tb/tb.v
+F../tb/tb.v
+L0 60
+R6
+r1
+!s85 0
+31
+R7
+!s107 ../tb/tb.v|
+!s90 ../tb/tb.v|
+!i113 1
+R10
+vtop
+R1
+!i10b 1
+!s100 ECJZA6P0noAbl>6ZF2M6^3
+I9^K=RaZSfJB5@NYFQTVUi3
+R2
+R0
+w1762929484
+8../top.v
+F../top.v
+L0 1
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_adapter
+R1
+!i10b 1
+!s100 YlHimDnh1Sfe;PON42O0a3
+I@Q57D3no>9afdjzQB@OoB2
+R2
+R0
+Z11 w1762838112
+Z12 8../vga_adapter/vga_adapter.v
+Z13 F../vga_adapter/vga_adapter.v
+L0 13
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_address_translator
+R1
+!i10b 1
+!s100 eL4K3WV9@Bg4BLgM`B_J=2
+I;^ViZaj;C2^kEE?DVcM8?0
+R2
+R0
+R11
+8../vga_adapter/vga_address_translator.v
+F../vga_adapter/vga_address_translator.v
+L0 4
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_controller
+R1
+!i10b 1
+!s100 MQU3MlM>HV>]IF42F1H0g3
+IlKG8P4RmQAPZIk^9c6UFB2
+R2
+R0
+R11
+8../vga_adapter/vga_controller.v
+F../vga_adapter/vga_controller.v
+L0 5
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_convert
+R1
+!i10b 1
+!s100 AZjhQ_[N<FJZ5X]@1GXfV1
+IdTbl7a[hMl2:ai>iCK1oF2
+R2
+R0
+R11
+R12
+R13
+L0 170
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_demo
+R1
+!i10b 1
+!s100 Z2`<SXIYl6D_gBTaC]UFa1
+Ia8EL@eBS`7l2_G35JKNOb0
+R2
+R0
+R3
+R4
+R5
+L0 5
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_ff
+R1
+!i10b 1
+!s100 ca<XezdKL@Qk^R]<d9_zU3
+IEL;GbZc4::AFI:M@`>[UF0
+R2
+R0
+R11
+R12
+R13
+L0 154
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vvga_writer
+R1
+!i10b 1
+!s100 VhT_7<m9ZzNe1AAgMlQoj2
+I0GN6CBJ79?6C9iPXVH>UC2
+R2
+R0
+R3
+R4
+R5
+L0 53
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10

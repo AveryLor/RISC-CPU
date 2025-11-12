@@ -37,7 +37,7 @@ module vga_demo(CLOCK_50, KEY, write, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, V
         .VGA_CLK(VGA_CLK)
     );
     defparam ADAPTER_INST.RESOLUTION = "640x480"; 
-    defparam VGA_ADAPT.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif" ;
+    defparam VGA_ADAPT.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif";
 endmodule
 
 // Writes to the screen 

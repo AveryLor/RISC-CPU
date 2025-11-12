@@ -2,31 +2,29 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(CLOCK_50, KEY, write, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
-    // --- Internal Signals for Connection ---
-    wire resetn; 
-    assign resetn = KEY[0]; 
-                            
-    // DESim VGA Interface signals
-    wire [9:0] VGA_X;       // 10 bits for 640 columns (0 to 639)
-    wire [9:0] VGA_Y;       // 10 bits for 480 lines (0 to 479)
-    wire [2:0] VGA_COLOR;   // 3 bits for R, G, B color output (3-bit color from vga_writer)
-    wire plot;              // Write signal to the VGA adapter
-
-    // VGA Adapter requires a pixel clock (25.175 MHz for 640x480)
-
-    // The writer generates the (X, Y) coordinates, the 3-bit color, and the write pulse (plot).
-    vga_writer writer (
-        .clock(CLOCK_50), 
-        .resetn(resetn), 
-        .VGA_X(VGA_X), 
-        .VGA_Y(VGA_Y), 
-        .VGA_COLOR(VGA_COLOR),
-        .plot(plot),
-        .SW(SW) // Pass switches down if needed later
-    ); 
-
-    // VGA Adapter instantiation
+module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, finished_register);
+	input CLOCK_50;
+	input [3:0] KEY;
+	output [8:0] addr;
+	input  [31:0] register_value;
+	output finished_register;
+	
+	output [7:0] VGA_R;
+	output [7:0] VGA_G;
+	output [7:0] VGA_B;
+	output VGA_HS;
+	output VGA_VS;
+	output VGA_BLANK_N;
+	output VGA_SYNC_N;
+	output VGA_CLK;
+	wire [8:0] VGA_X;
+	wire [7:0] VGA_Y;
+	wire [2:0] VGA_COLOR;
+	
+	wire [8:0] test;
+	assign addr = test;
+	
+	vga_writer writer (CLOCK_50, resetn, VGA_X, VGA_Y, LINE_COLOR, CHAR_COLOR); 
     vga_adapter VGA (
         .resetn(resetn),
         .clock(CLOCK_50),
@@ -43,11 +41,8 @@ module vga_demo(CLOCK_50, KEY, write, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, V
         .VGA_SYNC_N(VGA_SYNC_N),
         .VGA_CLK(VGA_CLK)
     );
-    
-    // DEFPARAMs for VGA configuration
-    defparam VGA.RESOLUTION = "640x480"; 
-    defparam VGA.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif"; // Assuming this is correct for DESim file path
-    
+	defparam VGA.RESOLUTION = "640x480";
+	defparam VGA.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif";
 endmodule
 
 //------------------------------------------------------------------
@@ -77,7 +72,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, plot, SW);
     
     // Counters and Flags
     wire finishedCharacter; 
-    wire [5:0] counter;  
+    wire [5:0] counter;
 
     // --- Register Coordinate Definitions (Unchanged) ---
     reg [9:0] y_coordinate [0:7]; // Corrected width to 10 bits
@@ -175,7 +170,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, plot, SW);
     
     // Y position: Start at base row coordinate, offset by inner pixel y
     assign VGA_Y = y_coordinate[row_idx] + pixel_y; 
-.
+
     wire pixel_on;
     assign pixel_on = pixels[pixel_y][7-pixel_x];
 
