@@ -13,9 +13,9 @@ module bram_addresser_with_brams (
 );
 	
 	wire store; // 1: storing in memory, 0: loading from memory
-	assign store = memory_access_code[0];
+	assign store = memory_access_code[4];
 	wire [3:0] byte_enable; // determines which 4 bytes will be written or stored
-	assign byte_enable = memory_access_code[4:1];
+	assign byte_enable = memory_access_code[3:0];
 
 	// Each B-RAM uses a 16 bit address and loads/stores bytes
 	wire [15:0] B_address [3:0];	// 4 addresses for loading/storing up to 4 bytes
@@ -62,25 +62,29 @@ module bram_addresser_with_brams (
 	(r == 2'd0) ? byte_enable[3] :
 	(r == 2'd1) ? byte_enable[2] :
 	(r == 2'd2) ? byte_enable[1] :
-	/*r == 2'd3*/ byte_enable[0]);
+	/*r == 2'd3*/ byte_enable[0]
+	);
 
 	assign B_write_enable[2] = store & (
 	(r == 2'd0) ? byte_enable[2] :
 	(r == 2'd1) ? byte_enable[1] :
 	(r == 2'd2) ? byte_enable[0] :
-	/*r == 2'd3*/ byte_enable[3]);
+	/*r == 2'd3*/ byte_enable[3]
+	);
 
 	assign B_write_enable[1] = store & (
 	(r == 2'd0) ? byte_enable[1] :
 	(r == 2'd1) ? byte_enable[0] :
 	(r == 2'd2) ? byte_enable[3] :
-	/*r == 2'd3*/ byte_enable[2]);
+	/*r == 2'd3*/ byte_enable[2]
+	);
 
 	assign B_write_enable[0] = store & (
 	(r == 2'd0) ? byte_enable[0] :
 	(r == 2'd1) ? byte_enable[3] :
 	(r == 2'd2) ? byte_enable[2] :
-	/*r == 2'd3*/ byte_enable[1]);
+	/*r == 2'd3*/ byte_enable[1]
+	);
 
 	// The order of consecutive bytes we want to read from the BRAM also rotates
 	assign writeback_register_data[31:24] =
@@ -111,7 +115,6 @@ module bram_addresser_with_brams (
 	
 	/* START OF GENERATED CODE */
 	// --- instantiate 4 byte-wide BRAMs (synchronous) ---
-    // Wire conversions for simple_sync_bram ports
 
     simple_sync_bram #(.ADDR_WIDTH(16), .DATA_WIDTH(8)) bram0 (
         .clk(~CLOCK_50),
