@@ -185,6 +185,17 @@ module char_bitmap(digit, pixelLine);
 					pixels[6] = 8'b10001000;
 					pixels[7] = 8'b00000000;
 				end
+
+				53: begin // space (null char)
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b00000000;
+					pixels[2] = 8'b00000000;
+					pixels[3] = 8'b00000000;
+					pixels[4] = 8'b00000000;
+					pixels[5] = 8'b00000000;
+					pixels[6] = 8'b00000000;
+					pixels[7] = 8'b00000000;
+				 end
 				
 				default: begin // space (null char)
 					pixels[0] = 8'b00000000;
