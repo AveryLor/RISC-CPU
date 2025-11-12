@@ -2,7 +2,7 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, finished_register);
+module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
 	input CLOCK_50;
 	input [3:0] KEY;
 	output [8:0] addr;
@@ -31,7 +31,7 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
         .color(color),
         .x(VGA_X),
         .y(VGA_Y),
-        .write(write),
+        .write(KEY[3]),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),
