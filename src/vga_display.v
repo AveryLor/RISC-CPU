@@ -26,9 +26,9 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
    vga_adapter VGA (
 		.resetn(KEY[0]),
 		.clock(CLOCK_50),
-		.color(MUX_color),
-		.x(MUX_x),
-		.y(MUX_y),
+		.color(VGA_COLOR),
+		.x(VGA_X),
+		.y(VGA_Y),
 		.write(KEY[3]),
 		.VGA_R(VGA_R),
 		.VGA_G(VGA_G),
@@ -39,6 +39,7 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.VGA_CLK(VGA_CLK));
 	defparam VGA.RESOLUTION = "640x480";
+//	defparam VGA.BACKGROUND_IMAGE = "./MIF/bmp_640_9.mif";
 endmodule
 
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
@@ -128,10 +129,10 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
     // For simplicity, let's keep it as an array of regs initialized in an initial block
     initial begin
-        column_values[0] = 6'd16; // R
-        column_values[1] = 6'd17; // :
-        column_values[2] = 6'd18; // Space
-        column_values[3] = 6'd0;  // 0 (Placeholder data)
+        column_values[0] = 8'd52; // R
+        column_values[1] = row_idx; // :
+        column_values[2] = 8'd53; // Space
+        column_values[3] = 8'd0;  // 0 (Placeholder data)
     end
     
     // --- Map character to bitmap ---
@@ -175,7 +176,7 @@ endmodule
 module row_drawer(clock, resetn, finishedCharacter, col_idx, row_idx); 
     input wire clock, resetn, finishedCharacter; 
     output reg [2:0] row_idx; 
-    output reg [1:0] col_idx; 
+    output reg [1:0] col_idx; // 0 to 3
 
     always @(posedge clock or negedge resetn) begin
         if (!resetn) begin
@@ -406,7 +407,16 @@ module char_bitmap(digit, pixelLine);
 					pixels[6] = 8'b10001000;
 					pixels[7] = 8'b00000000;
 				end
-				
+				53: begin // space (null char)
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b00000000;
+					pixels[2] = 8'b00000000;
+					pixels[3] = 8'b00000000;
+					pixels[4] = 8'b00000000;
+					pixels[5] = 8'b00000000;
+					pixels[6] = 8'b00000000;
+					pixels[7] = 8'b00000000;
+				 end
 				default: begin // space (null char)
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b00000000;
