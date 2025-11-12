@@ -5,9 +5,6 @@
 module top(
     input  wire CLOCK_50,
     input  wire [3:0] KEY,
-    input  wire [31:0] register_value,
-    output wire [8:0] addr,
-    output wire finished_register,
     output wire [7:0] VGA_R,
     output wire [7:0] VGA_G,
     output wire [7:0] VGA_B,
@@ -23,9 +20,6 @@ module top(
         .CLOCK_50(CLOCK_50),
         .KEY(KEY),
         .SW(8'd0),                  // Not used in this demo
-        .register_value(register_value),
-        .addr(addr),
-        .finished_register(finished_register),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),

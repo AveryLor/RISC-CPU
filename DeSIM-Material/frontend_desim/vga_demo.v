@@ -3,32 +3,29 @@
 
 // Top-level module for DESim board
 module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
-	input CLOCK_50;
-	input [3:0] KEY;
-	output [8:0] addr;
-	input  [31:0] register_value;
-	output finished_register;
+	input wire CLOCK_50;
+	input wire [3:0] KEY;
 	
-	output [7:0] VGA_R;
-	output [7:0] VGA_G;
-	output [7:0] VGA_B;
-	output VGA_HS;
-	output VGA_VS;
-	output VGA_BLANK_N;
-	output VGA_SYNC_N;
-	output VGA_CLK;
+	output wire [7:0] VGA_R;
+	output wire [7:0] VGA_G;
+	output wire [7:0] VGA_B;
+	output wire VGA_HS;
+	output wire VGA_VS;
+	output wire VGA_BLANK_N;
+	output wire VGA_SYNC_N;
+	output wire VGA_CLK;
 	wire [8:0] VGA_X;
 	wire [7:0] VGA_Y;
 	wire [2:0] VGA_COLOR;
+
+    input wire [7:0] SW; 
+
 	
-	wire [8:0] test;
-	assign addr = test;
-	
-	vga_writer writer (CLOCK_50, resetn, VGA_X, VGA_Y, LINE_COLOR, CHAR_COLOR); 
+	vga_writer writer (CLOCK_50, KEY[0], VGA_X, VGA_Y, VGA_COLOR, SW); 
     vga_adapter VGA (
-        .resetn(resetn),
+        .resetn(KEY[0]),
         .clock(CLOCK_50),
-        .color(color),
+        .color(VGA_COLOR),
         .x(VGA_X),
         .y(VGA_Y),
         .write(KEY[3]),
@@ -50,16 +47,15 @@ endmodule
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
 // This logic has been substantially fixed to handle counters correctly.
 //------------------------------------------------------------------
-module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, plot, SW);
-    input clock; 
-    input resetn;
-    input [7:0] SW; // For future use
+module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
+    input wire clock; 
+    input wire resetn;
+    input wire [7:0] SW; // For future use
     
     // Outputs to VGA Adapter
     output wire [9:0] VGA_X;    // Corrected width to 10 bits (0-639)
     output wire [9:0] VGA_Y;    // Corrected width to 10 bits (0-479)
     output wire [2:0] VGA_COLOR; // 3-bit color output
-    output wire plot;           // Write pulse
 
     // --- Internal Logic Signals ---
     // Character Index Pointers (Updated by char_index_fsm/row_drawer)
@@ -178,12 +174,11 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, plot, SW);
     assign VGA_COLOR = pixel_on ? 3'b111 : 3'b000;
     
     // The plot signal should be asserted only when the VGA adapter is ready to write
-    assign plot = 1'b1; 
 endmodule
 
 // Increments row
 module char_index_fsm(clock, resetn, finishedCharacter, col_idx, row_idx); 
-    input clock, resetn, finishedCharacter; 
+    input wire clock, resetn, finishedCharacter; 
     output reg [2:0] row_idx; 
     output reg [1:0] col_idx; 
 
@@ -209,12 +204,9 @@ endmodule
 
 // Keeps track of when one character is done counting
 module one_char_counter(resetn, clock, counter, finishedCharacter);
-    input resetn, clock; 
-    output [5:0] counter;
-    output finishedCharacter; 
-    
-    reg [5:0] counter;
-    reg finishedCharacter; 
+    input wire resetn, clock; 
+    output reg [5:0] counter;
+    output reg finishedCharacter; 
     
     always @ (posedge clock or negedge resetn) begin
         if (!resetn) begin
@@ -234,8 +226,8 @@ endmodule
 
 // Maps the bitmap characters
 module char_bitmap(digit, pixelLine);
-	input [7:0] digit;
-	output [63:0] pixelLine;
+	input wire [7:0] digit;
+	output wire [63:0] pixelLine;
 	reg [7:0] pixels [7:0];
 	
 	assign pixelLine[7:0] = pixels[0];

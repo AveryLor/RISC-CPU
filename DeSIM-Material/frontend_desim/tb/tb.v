@@ -7,11 +7,8 @@ module tb();
     // Clock and inputs
     reg CLOCK_50 = 0;
     reg [3:0] KEY = 4'b1111;
-    reg [31:0] register_value = 32'h12345678;
 
     // Outputs
-    wire [8:0] addr;
-    wire finished_register;
     wire [7:0] VGA_R;
     wire [7:0] VGA_G;
     wire [7:0] VGA_B;
@@ -25,9 +22,6 @@ module tb();
     top DUT (
         .CLOCK_50(CLOCK_50),
         .KEY(KEY),
-        .register_value(register_value),
-        .addr(addr),
-        .finished_register(finished_register),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),

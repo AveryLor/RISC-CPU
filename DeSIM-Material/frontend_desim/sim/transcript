@@ -1,5 +1,5 @@
 # vsim -pli "C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi" -Lf 220model -Lf altera_mf_ver -Lf verilog -t 1ns -c -do "run -all" tb 
-# Start time: 01:39:57 on Nov 12,2025
+# Start time: 01:59:32 on Nov 12,2025
 # Loading work.tb
 # Loading work.top
 # Loading work.vga_demo
@@ -9,21 +9,29 @@
 # Loading work.char_bitmap
 # Loading work.vga_adapter
 # Loading work.vga_convert
-# ** Error: (vsim-3389) ../top.v(20): Port 'SW' not found in the connected module (3rd connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Error: (vsim-3389) ../top.v(20): Port 'write' not found in the connected module (4th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_X' not found in the connected module (5th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_Y' not found in the connected module (6th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Error: (vsim-3389) ../top.v(20): Port 'VGA_COLOR' not found in the connected module (7th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Error: (vsim-3389) ../top.v(20): Port 'plot' not found in the connected module (8th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
-# ** Fatal: (vsim-3365) ../top.v(20): Too many port connections. Expected 13, found 16.
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1 File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(24): [PCDPC] - Port size (10) does not match connection size (9) for port 'VGA_X'. The port definition is at: ../vga_demo.v(50).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/writer File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(24): [PCDPC] - Port size (10) does not match connection size (8) for port 'VGA_Y'. The port definition is at: ../vga_demo.v(50).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/writer File: ../vga_demo.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_R' not found in the connected module (7th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_G' not found in the connected module (8th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_B' not found in the connected module (9th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_HS' not found in the connected module (10th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_VS' not found in the connected module (11th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_BLANK_N' not found in the connected module (12th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_SYNC_N' not found in the connected module (13th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(25): Port 'VGA_CLK' not found in the connected module (14th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
+# ** Fatal: (vsim-3365) ../vga_demo.v(25): Too many port connections. Expected 11, found 14.
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/U1/VGA File: ../vga_adapter/vga_adapter.v
 # FATAL ERROR while loading design
 # Error loading design
-# End time: 01:39:57 on Nov 12,2025, Elapsed time: 0:00:00
-# Errors: 7, Warnings: 0
+# End time: 01:59:32 on Nov 12,2025, Elapsed time: 0:00:00
+# Errors: 9, Warnings: 2
