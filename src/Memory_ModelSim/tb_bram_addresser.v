@@ -1,5 +1,7 @@
 module tb_bram_addresser;
     reg         clk;
+    reg [1:0] prev_rQ;
+    wire [1:0] prev_rD;
     reg  [31:0] tb_data_to_store;
     reg  [4:0]  tb_memory_access_code;
     reg  [31:0] tb_memory_address;
@@ -12,12 +14,15 @@ module tb_bram_addresser;
         .memory_access_code(tb_memory_access_code),
         .memory_address(tb_memory_address),
         .CLOCK_50(clk),
-        .writeback_register_data(tb_writeback_register_data)
+	.prev_r(prev_rQ),
+        .writeback_register_data(tb_writeback_register_data),
+	.r(prev_rD)
     );
 
     // clock generation: 20ns period (50MHz)
     initial clk = 0;
     always #10 clk = ~clk;
+    always @(negedge clk) prev_rQ <= prev_rD;
 
     initial begin
         // VCD for viewing in ModelSim
@@ -220,9 +225,9 @@ module tb_bram_addresser;
 	@(negedge clk); $display("clock! Finished read @ 20. Stored d0d1 @ 22");
 
 	$display("writeback: %h (expected: f2f3xxxx)", tb_writeback_register_data);
-/*
+
 	tb_memory_address = 32'd25;
-        tb_data_to_store = 32'hf0f1f2f3;
+        tb_data_to_store = 32'ha0a1a2a3;
         tb_memory_access_code = 5'b1_1111;  
 	$display(" ");
 	@(negedge clk); $display("clock! Stored a0a1a2a3 @ 25");
@@ -233,17 +238,24 @@ module tb_bram_addresser;
 	$display(" ");
 	@(negedge clk); $display("clock! Stored d4d5 @ 29");
 
+	tb_memory_address = 32'd20;
+        tb_data_to_store = 32'hEEEEEEEE;
+        tb_memory_access_code = 5'b0_1111;  
+	$display(" ");
+	@(negedge clk); $display("clock! Started read @ 20");
+
 	tb_memory_address = 32'd24;
         tb_data_to_store = 32'hEEEEEEEE;
         tb_memory_access_code = 5'b0_1111;  
 	$display(" ");
-	@(negedge clk); $display("clock! Started read @ 24");
+	@(negedge clk); $display("clock! Finished read @ 20. Started read @ 24");
+	$display("writeback: %h (expected: f2f3d0d1)", tb_writeback_register_data);
 
 	tb_memory_address = 32'd28;
         tb_data_to_store = 32'hEEEEEEEE;
         tb_memory_access_code = 5'b0_1111;  
 	$display(" ");
-	@(negedge clk); $display("clock! Finished read @ 24. @ 24 Started read @ 28");
+	@(negedge clk); $display("clock! Finished read @ 24. Started read @ 28");
 	$display("writeback: %h (expected: xxa0a1a2)", tb_writeback_register_data);
 
 	tb_memory_address = 32'd28;
@@ -252,7 +264,5 @@ module tb_bram_addresser;
 	$display(" ");
 	@(negedge clk); $display("clock! Finished read @ 28. memory no-op");
 	$display("writeback: %h (expected: a3d4d5xx)", tb_writeback_register_data);
-*/
-
     end
 endmodule
