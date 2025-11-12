@@ -9,7 +9,7 @@ module simple_sync_bram #(
     input wire                  we,   // write enable
     input wire [ADDR_WIDTH-1:0] addr,
     input wire [DATA_WIDTH-1:0] din,
-    output reg [DATA_WIDTH-1:0] dout
+    output reg [DATA_WIDTH-1:0] dout // when in dout... LOL
 );
 
     // memory array
