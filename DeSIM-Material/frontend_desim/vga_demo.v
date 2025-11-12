@@ -44,9 +44,8 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     output wire [9:0] VGA_Y;    // Corrected width to 10 bits (0-479)
     output wire [2:0] VGA_COLOR; // 3-bit color output
 
-    // --- Internal Logic Signals ---
-    // Character Index Pointers (Updated by char_index_fsm/row_drawer)
-    wire [2:0] row_idx; // 0->7 rows
+    // Use these like pointers 
+	wire [2:0] row_idx; // 0->7 rows
     wire [1:0] col_idx; // 0->3 columns
     
     // Pixel Pointers (Run on every clock cycle to iterate 8x8 character)
@@ -82,9 +81,8 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
         .finishedCharacter(finishedCharacter)
     ); 
 
-    // 2. Character Position Stepper (New name for row_drawer)
-    // Only increments when finishedCharacter is asserted (one clock pulse)
-    char_index_fsm cif (
+    // 2. draws out each row
+    row_drawer rd (
         .clock(clock), 
         .resetn(resetn), 
         .finishedCharacter(finishedCharacter), 
@@ -158,13 +156,13 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     assign pixel_on = pixels[pixel_y][7-pixel_x];
 
     // Assign 3-bit color: White (3'b111) if pixel is on, Black (3'b000) if off
-    assign VGA_COLOR = pixel_on ? 3'b111 : 3'b000;
+    assign VGA_COLOR = 3'b000;
     
     // The plot signal should be asserted only when the VGA adapter is ready to write
 endmodule
 
 // Increments row
-module char_index_fsm(clock, resetn, finishedCharacter, col_idx, row_idx); 
+module row_drawer(clock, resetn, finishedCharacter, col_idx, row_idx); 
     input wire clock, resetn, finishedCharacter; 
     output reg [2:0] row_idx; 
     output reg [1:0] col_idx; 
