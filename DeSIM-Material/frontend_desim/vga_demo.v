@@ -2,23 +2,16 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+module vga_demo(CLOCK_50, KEY, SW, VGA_SYNC);
 	input wire CLOCK_50;
 	input wire [3:0] KEY;
-	
-	output wire [7:0] VGA_R;
-	output wire [7:0] VGA_G;
-	output wire [7:0] VGA_B;
-	output wire VGA_HS;
-	output wire VGA_VS;
-	output wire VGA_BLANK_N;
-	output wire VGA_SYNC_N;
-	output wire VGA_CLK;
+
 	wire [8:0] VGA_X;
 	wire [7:0] VGA_Y;
 	wire [2:0] VGA_COLOR;
 
     input wire [7:0] SW; 
+    output wire VGA_SYNC; 
 
 	
 	vga_writer writer (CLOCK_50, KEY[0], VGA_X, VGA_Y, VGA_COLOR, SW); 
@@ -28,15 +21,9 @@ module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLAN
         .color(VGA_COLOR),
         .x(VGA_X),
         .y(VGA_Y),
-        .write(KEY[3]),
-        .VGA_R(VGA_R),
-        .VGA_G(VGA_G),
-        .VGA_B(VGA_B),
-        .VGA_HS(VGA_HS),
-        .VGA_VS(VGA_VS),
-        .VGA_BLANK_N(VGA_BLANK_N),
-        .VGA_SYNC_N(VGA_SYNC_N),
-        .VGA_CLK(VGA_CLK)
+        .write(KEY[3]), 
+        .VGA_COLOR(VGA_COLOR),  // the output VGA color
+        .VGA_SYNC(VGA_SYNC)  // indicates when background MIF has been drawn
     );
 	defparam VGA.RESOLUTION = "640x480";
 	defparam VGA.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif";
@@ -425,4 +412,3 @@ module char_bitmap(digit, pixelLine);
 		endcase
 	end
 endmodule
-// You will also need a separate `vga_adapter.v` module for the simulation to work.

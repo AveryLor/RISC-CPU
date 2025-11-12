@@ -9,21 +9,21 @@ z2
 cModel Technology
 Z0 dC:/Users/avery/WorkProjects/RISC-V-CPU/DeSIM-Material/frontend_desim/sim
 vchar_bitmap
-Z1 !s110 1762930770
+Z1 !s110 1762932017
 !i10b 1
-!s100 :j0gk1:KES9k=c4al<U3I3
-IHAoc3_dGZ5aKSHbA=?;6M0
+!s100 =RO]LWl^<mon:YRWPZ]ao3
+I^ZJS^1;B@;^QFnXKOmCE31
 Z2 VDg1SIo80bB@j0V0VzS_@n1
 R0
-Z3 w1762930748
+Z3 w1762932014
 Z4 8../vga_demo.v
 Z5 F../vga_demo.v
-L0 228
+L0 215
 Z6 OV;L;10.5b;63
 r1
 !s85 0
 31
-Z7 !s108 1762930770.000000
+Z7 !s108 1762932016.000000
 Z8 !s107 ../vga_adapter/vga_controller.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_adapter.v|../vga_demo.v|../top.v|
 Z9 !s90 ../top.v|../vga_demo.v|../vga_adapter/vga_adapter.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_controller.v|
 !i113 1
@@ -31,14 +31,14 @@ Z10 tCvgOpt 0
 vchar_index_fsm
 R1
 !i10b 1
-!s100 SKP7gPgo^iVbHFQY]8H]Z3
-IPzUz]cA2a[BRZQiCdS]b^3
+!s100 <5ZGmn7YV38R71Z?KfT3>3
+I>1g`^Dg2W_HOjTJU?gJ9]0
 R2
 R0
 R3
 R4
 R5
-L0 180
+L0 167
 R6
 r1
 !s85 0
@@ -51,14 +51,14 @@ R10
 vone_char_counter
 R1
 !i10b 1
-!s100 nihBaoV4OGC2[Z4MYNG`U0
-IMO=DlR:X:U9S]WO8I=<XA2
+!s100 D?BDhGFVZ7RP>14G0cGX73
+IfQ1NcZ7W7QS9Q;BFid0k=3
 R2
 R0
 R3
 R4
 R5
-L0 206
+L0 193
 R6
 r1
 !s85 0
@@ -69,21 +69,21 @@ R9
 !i113 1
 R10
 vtb
-R1
+!s110 1762932016
 !i10b 1
-!s100 b0XFkL@eI?I3LaHa9aiO82
-IzK71@^SCgCFEHJk^EhRJX2
+!s100 g`j2H]D?jI3<S3Y@2m9;h3
+I:m^Qod70U7I_l9iLW;ee>0
 R2
 R0
-w1762930742
+w1762931891
 8../tb/tb.v
 F../tb/tb.v
-L0 5
+L0 4
 R6
 r1
 !s85 0
 31
-!s108 1762930769.000000
+R7
 !s107 ../tb/tb.v|
 !s90 ../tb/tb.v|
 !i113 1
@@ -95,7 +95,7 @@ R1
 ICh=>Zfa:HZ@m@MGiHZ7Vj2
 R2
 R0
-w1762930767
+w1762931884
 8../top.v
 F../top.v
 L0 5
@@ -191,8 +191,8 @@ R10
 vvga_demo
 R1
 !i10b 1
-!s100 aCe9TUCaFgMl4<CjHJY:42
-I6k4AA>iMG[mF:89H]459M1
+!s100 ZzA^[kbZC[mIkX0D@5iz]1
+ID55K>9@0XzeEeRdnRj<RP1
 R2
 R0
 R3
@@ -231,14 +231,14 @@ R10
 vvga_writer
 R1
 !i10b 1
-!s100 `JOVhGYE2CAEobL>h@WMJ1
-I909:EL0Y^ZJEYjebKlgk<2
+!s100 6518g<zfC0M=<?BFEZP4A3
+IeF5Yd7ARXNPBi``9F485<1
 R2
 R0
 R3
 R4
 R5
-L0 50
+L0 37
 R6
 r1
 !s85 0

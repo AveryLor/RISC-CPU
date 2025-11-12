@@ -1,51 +1,45 @@
-// tb.v - testbench for DESim VGA Demo
 `timescale 1ns / 1ns
 `default_nettype none
 
 module tb();
 
-    // Clock and inputs
+    // === Signals ===
     reg CLOCK_50 = 0;
     reg [3:0] KEY = 4'b1111;
+    reg [7:0] SW = 8'b0;
 
-    // Outputs
-    wire [7:0] VGA_R;
-    wire [7:0] VGA_G;
-    wire [7:0] VGA_B;
-    wire VGA_HS;
-    wire VGA_VS;
-    wire VGA_BLANK_N;
-    wire VGA_SYNC_N;
-    wire VGA_CLK;
+    wire VGA_SYNC;
+    wire [23:0] VGA_COLOR;
 
-    // Instantiate top-level module
-    top DUT (
+    // === Instantiate the top module ===
+    vga_demo DUT (
         .CLOCK_50(CLOCK_50),
         .KEY(KEY),
-        .VGA_R(VGA_R),
-        .VGA_G(VGA_G),
-        .VGA_B(VGA_B),
-        .VGA_HS(VGA_HS),
-        .VGA_VS(VGA_VS),
-        .VGA_BLANK_N(VGA_BLANK_N),
-        .VGA_SYNC_N(VGA_SYNC_N),
-        .VGA_CLK(VGA_CLK)
+        .SW(SW),
+        .VGA_SYNC(VGA_SYNC)
     );
 
-    // Generate 50 MHz clock
+    // === Clock generation (50 MHz) ===
     always #10 CLOCK_50 = ~CLOCK_50;
 
-    // Example stimulus
+    // === Test stimulus ===
     initial begin
-        // Initial reset
-        KEY = 4'b0000; // reset
+        // Reset pulse
+        KEY[0] = 0;
         #50;
-        KEY = 4'b1111; // release reset
+        KEY[0] = 1;
 
-        // Toggle write pulse (KEY[3])
-        #100 KEY[3] = 0;
-        #20  KEY[3] = 1;
-        #200 $stop;
+        // Toggle write key
+        #100;
+        KEY[3] = 0;
+        #20;
+        KEY[3] = 1;
+
+        // Change switches
+        SW = 8'hFF;
+        #200;
+
+        $finish;
     end
 
 endmodule
