@@ -8,7 +8,7 @@ module one_char_counter(resetn, clock, counter, finishedCharacter);
             counter <= 0; 
             finishedCharacter <= 0; 
         end else begin
-            if (counter == 6'd10) begin
+            if (counter == 6'd63) begin
                 counter <= 0;
                 finishedCharacter <= 1;
             end else begin
