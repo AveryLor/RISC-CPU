@@ -1,6 +1,6 @@
 // Draw's out the registers
 
-module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+module vga_demo(CLOCK_50, KEY, write, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
     // parameter definitions for 680 x 480 
     parameter nX = 10;
     parameter nY = 9; 
@@ -16,10 +16,7 @@ module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLAN
 
     wire resetn; 
     assign resetn = KEY[0]; 
-
-	// Visual wires
-	wire LINE_COLOR = 9'b000000000; // white
-	wire CHAR_COLOR = 9'b000000000; // white
+	input write
 
     // instantiate the VGA adapter and surrounding support 
 	vga_writer writer (CLOCK_50, resetn, VGA_X, VGA_Y, LINE_COLOR, CHAR_COLOR); 
@@ -27,8 +24,8 @@ module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLAN
         .resetn(resetn),
         .clock(CLOCK_50),
         .color(color),
-        .x(X),
-        .y(Y),
+        .x(VGA_X),
+        .y(VGA_Y),
         .write(write),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
@@ -39,7 +36,7 @@ module vga_demo(CLOCK_50, KEY, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLAN
         .VGA_SYNC_N(VGA_SYNC_N),
         .VGA_CLK(VGA_CLK)
     );
-    defparam ADAPTER_INST.RESOLUTION = "640x480"
+    defparam ADAPTER_INST.RESOLUTION = "640x480"; 
     defparam VGA_ADAPT.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif" ;
 endmodule
 

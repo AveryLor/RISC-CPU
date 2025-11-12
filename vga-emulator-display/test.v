@@ -2,21 +2,7 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(
-    input CLOCK_50,
-    input [0:0] KEY,    // KEY[0] used for resetn
-    input [7:0] SW,     // Switches for potential external data
-    // VGA Outputs (connected to vga_adapter)
-    output VGA_R,
-    output VGA_G,
-    output VGA_B,
-    output VGA_HS,
-    output VGA_VS,
-    output VGA_BLANK_N,
-    output VGA_SYNC_N,
-    output VGA_CLK
-);
-    
+module vga_demo(CLOCK_50, KEY, write, SW, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
     // --- Internal Signals for Connection ---
     wire resetn; 
     assign resetn = KEY[0]; 
@@ -28,9 +14,7 @@ module vga_demo(
     wire plot;              // Write signal to the VGA adapter
 
     // VGA Adapter requires a pixel clock (25.175 MHz for 640x480)
-    // Assuming CLOCK_50 is 50MHz and vga_adapter generates the necessary pixel clock internally (VGA_CLK).
 
-    // --- Instantiate the Character Generator (Data Source) ---
     // The writer generates the (X, Y) coordinates, the 3-bit color, and the write pulse (plot).
     vga_writer writer (
         .clock(CLOCK_50), 
@@ -42,17 +26,14 @@ module vga_demo(
         .SW(SW) // Pass switches down if needed later
     ); 
 
-    // --- Instantiate the VGA Adapter ---
-    // The adapter takes the (X, Y, COLOR, plot) data and generates the 
-    // standard VGA signals (R, G, B, HS, VS, etc.)
+    // VGA Adapter instantiation
     vga_adapter VGA (
         .resetn(resetn),
         .clock(CLOCK_50),
-        .color({VGA_COLOR, VGA_COLOR, VGA_COLOR, VGA_COLOR, VGA_COLOR, VGA_COLOR, VGA_COLOR, VGA_COLOR}), // Map 3-bit color to 24-bit R/G/B (8 bits each)
+        .color(color),
         .x(VGA_X),
         .y(VGA_Y),
-        .write(plot),
-        // VGA Outputs to Monitor
+        .write(write),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B),
