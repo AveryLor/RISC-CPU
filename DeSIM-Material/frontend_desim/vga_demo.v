@@ -2,50 +2,60 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(CLOCK_50, KEY, SW, VGA_SYNC);
+module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, finished_register);
 	input wire CLOCK_50;
 	input wire [3:0] KEY;
-
+	output wire [8:0] addr;
+	input wire [31:0] register_value;
+	output wire finished_register;
+	
+	output wire [7:0] VGA_R;
+	output wire [7:0] VGA_G;
+	output wire [7:0] VGA_B;
+	output wire VGA_HS;
+	output wire VGA_VS;
+	output wire VGA_BLANK_N;
+	output wire VGA_SYNC_N;
+	output wire VGA_CLK;
 	wire [8:0] VGA_X;
 	wire [7:0] VGA_Y;
-	wire [2:0] VGA_COLOR;
-
-    input wire [7:0] SW; 
-    output wire VGA_SYNC; 
+	wire [2:0] VGA_COLOR; 
 
 	
-	vga_writer writer (CLOCK_50, KEY[0], VGA_X, VGA_Y, VGA_COLOR, SW); 
+	vga_writer writer (CLOCK_50, KEY[0], VGA_X, VGA_Y, VGA_COLOR); 
     vga_adapter VGA (
-        .resetn(KEY[0]),
-        .clock(CLOCK_50),
-        .color(VGA_COLOR),
-        .x(VGA_X),
-        .y(VGA_Y),
-        .write(KEY[3]), 
-        .VGA_COLOR(VGA_COLOR),  // the output VGA color
-        .VGA_SYNC(VGA_SYNC)  // indicates when background MIF has been drawn
-    );
+		.resetn(KEY[0]),
+		.clock(CLOCK_50),
+		.color(VGA_COLOR),
+		.x(VGA_X),
+		.y(VGA_Y),
+		.write(KEY[3]),
+		.VGA_R(VGA_R),
+		.VGA_G(VGA_G),
+		.VGA_B(VGA_B),
+		.VGA_HS(VGA_HS),
+		.VGA_VS(VGA_VS),
+		.VGA_BLANK_N(VGA_BLANK_N),
+		.VGA_SYNC_N(VGA_SYNC_N),
+		.VGA_CLK(VGA_CLK));
 	defparam VGA.RESOLUTION = "640x480";
-	defparam VGA.BACKGROUND_IMAGE = "./mif/0_bmp_640_9.mif";
+//	defparam VGA.BACKGROUND_IMAGE = "./MIF/bmp_640_9.mif";
 endmodule
 
-//------------------------------------------------------------------
-// Module: vga_writer
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
-// This logic has been substantially fixed to handle counters correctly.
 //------------------------------------------------------------------
-module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
+module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
     input wire clock; 
     input wire resetn;
-    input wire [7:0] SW; // For future use
     
     // Outputs to VGA Adapter
     output wire [9:0] VGA_X;    // Corrected width to 10 bits (0-639)
     output wire [9:0] VGA_Y;    // Corrected width to 10 bits (0-479)
     output wire [2:0] VGA_COLOR; // 3-bit color output
 
-    // Use these like pointers 
-	wire [2:0] row_idx; // 0->7 rows
+    // --- Internal Logic Signals ---
+    // Character Index Pointers (Updated by char_index_fsm/row_drawer)
+    wire [2:0] row_idx; // 0->7 rows
     wire [1:0] col_idx; // 0->3 columns
     
     // Pixel Pointers (Run on every clock cycle to iterate 8x8 character)
@@ -81,7 +91,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
         .finishedCharacter(finishedCharacter)
     ); 
 
-    // 2. draws out each row
+    // 2. Character Position Stepper (New name for row_drawer)
     row_drawer rd (
         .clock(clock), 
         .resetn(resetn), 
@@ -118,10 +128,10 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
     // For simplicity, let's keep it as an array of regs initialized in an initial block
     initial begin
-        column_values[0] = 6'd16; // R
-        column_values[1] = 6'd17; // :
-        column_values[2] = 6'd18; // Space
-        column_values[3] = 6'd0;  // 0 (Placeholder data)
+        column_values[0] = 8'd52; // R
+        column_values[1] = row_idx; // :
+        column_values[2] = 8'd53; // Space
+        column_values[3] = 8'd0;  // 0 (Placeholder data)
     end
     
     // --- Map character to bitmap ---
@@ -156,7 +166,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     assign pixel_on = pixels[pixel_y][7-pixel_x];
 
     // Assign 3-bit color: White (3'b111) if pixel is on, Black (3'b000) if off
-    assign VGA_COLOR = 3'b000;
+    assign VGA_COLOR = pixel_on ? 3'b111 : 3'b000;
     
     // The plot signal should be asserted only when the VGA adapter is ready to write
 endmodule
@@ -165,7 +175,7 @@ endmodule
 module row_drawer(clock, resetn, finishedCharacter, col_idx, row_idx); 
     input wire clock, resetn, finishedCharacter; 
     output reg [2:0] row_idx; 
-    output reg [1:0] col_idx; 
+    output reg [1:0] col_idx; // 0 to 3
 
     always @(posedge clock or negedge resetn) begin
         if (!resetn) begin
@@ -190,20 +200,20 @@ endmodule
 // Keeps track of when one character is done counting
 module one_char_counter(resetn, clock, counter, finishedCharacter);
     input wire resetn, clock; 
-    output reg [5:0] counter;
+    output reg [5:0] counter; 
     output reg finishedCharacter; 
     
-    always @ (posedge clock or negedge resetn) begin
+    always @ (posedge clock) begin
         if (!resetn) begin
             counter <= 0; 
             finishedCharacter <= 0; 
         end else begin
-            finishedCharacter <= 0; // Default de-assert
-            if (counter == 6'd63) begin // Reached final count
-                counter <= 0; // Roll over
-                finishedCharacter <= 1; // Assert pulse for one cycle
+            if (counter == 6'd63) begin
+                counter <= 0;
+                finishedCharacter <= 1;
             end else begin
-                counter <= counter + 1; // Count up
+                counter <= counter + 1;
+                finishedCharacter <= 0;
             end
         end
     end
@@ -396,7 +406,16 @@ module char_bitmap(digit, pixelLine);
 					pixels[6] = 8'b10001000;
 					pixels[7] = 8'b00000000;
 				end
-				
+				53: begin // space (null char)
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b00000000;
+					pixels[2] = 8'b00000000;
+					pixels[3] = 8'b00000000;
+					pixels[4] = 8'b00000000;
+					pixels[5] = 8'b00000000;
+					pixels[6] = 8'b00000000;
+					pixels[7] = 8'b00000000;
+				 end
 				default: begin // space (null char)
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b00000000;

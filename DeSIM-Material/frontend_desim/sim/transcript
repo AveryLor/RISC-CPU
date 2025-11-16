@@ -1,35 +1,18 @@
 # vsim -pli "C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi" -Lf 220model -Lf altera_mf_ver -Lf verilog -t 1ns -c -do "run -all" tb 
-# Start time: 02:20:22 on Nov 12,2025
+# Start time: 20:39:35 on Nov 15,2025
 # Loading work.tb
 # Loading work.vga_demo
 # Loading work.vga_writer
 # Loading work.one_char_counter
-# Loading work.char_index_fsm
+# Loading work.row_drawer
 # Loading work.char_bitmap
 # Loading work.vga_adapter
 # Loading work.vga_convert
-# ** Warning: (vsim-3015) ../vga_demo.v(17): [PCDPC] - Port size (10) does not match connection size (9) for port 'VGA_X'. The port definition is at: ../vga_demo.v(37).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/writer File: ../vga_demo.v
-# ** Warning: (vsim-3015) ../vga_demo.v(17): [PCDPC] - Port size (10) does not match connection size (8) for port 'VGA_Y'. The port definition is at: ../vga_demo.v(37).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/writer File: ../vga_demo.v
-# ** Warning: (vsim-3017) ../vga_demo.v(18): [TFMPC] - Too few port connections. Expected 11, found 8.
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
-# ** Warning: (vsim-3015) ../vga_demo.v(18): [PCDPC] - Port size (10) does not match connection size (9) for port 'x'. The port definition is at: ../vga_adapter/vga_adapter.v(17).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
-# ** Warning: (vsim-3015) ../vga_demo.v(18): [PCDPC] - Port size (9) does not match connection size (8) for port 'y'. The port definition is at: ../vga_adapter/vga_adapter.v(17).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
-# ** Warning: (vsim-3015) ../vga_demo.v(18): [PCDPC] - Port size (24) does not match connection size (3) for port 'VGA_COLOR'. The port definition is at: ../vga_adapter/vga_adapter.v(20).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
-# ** Warning: (vsim-3722) ../vga_demo.v(18): [TFMPC] - Missing connection for port 'VGA_X'.
-# ** Warning: (vsim-3722) ../vga_demo.v(18): [TFMPC] - Missing connection for port 'VGA_Y'.
-# ** Warning: (vsim-3722) ../vga_demo.v(18): [TFMPC] - Missing connection for port 'plot'.
-# Loading C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi
-# run -all
-# Time scaling: 0.0001 sim seconds per real-time second
-# 
-# 
-# Connected to server!
-# ** Note: $finish    : ../tb/tb.v(42)
-#    Time: 370 ns  Iteration: 0  Instance: /tb
-# End time: 02:20:22 on Nov 12,2025, Elapsed time: 0:00:00
-# Errors: 0, Warnings: 9
+# ** Error: (vsim-3389) ../tb/tb.v(26): Port 'SW' not found in the connected module (6th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT File: ../vga_demo.v
+# ** Fatal: (vsim-3365) ../tb/tb.v(26): Too many port connections. Expected 13, found 14.
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT File: ../vga_demo.v
+# FATAL ERROR while loading design
+# Error loading design
+# End time: 20:39:36 on Nov 15,2025, Elapsed time: 0:00:01
+# Errors: 2, Warnings: 0

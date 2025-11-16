@@ -9,36 +9,36 @@ z2
 cModel Technology
 Z0 dC:/Users/avery/WorkProjects/RISC-V-CPU/DeSIM-Material/frontend_desim/sim
 vchar_bitmap
-Z1 !s110 1762932017
+Z1 !s110 1763257152
 !i10b 1
-!s100 =RO]LWl^<mon:YRWPZ]ao3
-I^ZJS^1;B@;^QFnXKOmCE31
+!s100 ]]DP`YOdGU3e0L;aPem[Z3
+I>8IYeBBk[5P`mMUoW??cB1
 Z2 VDg1SIo80bB@j0V0VzS_@n1
 R0
-Z3 w1762932014
+Z3 w1763257151
 Z4 8../vga_demo.v
 Z5 F../vga_demo.v
-L0 215
+L0 223
 Z6 OV;L;10.5b;63
 r1
 !s85 0
 31
-Z7 !s108 1762932016.000000
+Z7 !s108 1763257152.000000
 Z8 !s107 ../vga_adapter/vga_controller.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_adapter.v|../vga_demo.v|../top.v|
 Z9 !s90 ../top.v|../vga_demo.v|../vga_adapter/vga_adapter.v|../vga_adapter/vga_address_translator.v|../vga_adapter/vga_controller.v|
 !i113 1
 Z10 tCvgOpt 0
-vchar_index_fsm
+vone_char_counter
 R1
 !i10b 1
-!s100 <5ZGmn7YV38R71Z?KfT3>3
-I>1g`^Dg2W_HOjTJU?gJ9]0
+!s100 6Z60hEIL^HNni^iFKDQh93
+Ie[dc?XYeE?0ZP4GI>gi7?1
 R2
 R0
 R3
 R4
 R5
-L0 167
+L0 201
 R6
 r1
 !s85 0
@@ -48,17 +48,17 @@ R8
 R9
 !i113 1
 R10
-vone_char_counter
+vrow_drawer
 R1
 !i10b 1
-!s100 D?BDhGFVZ7RP>14G0cGX73
-IfQ1NcZ7W7QS9Q;BFid0k=3
+!s100 @DSGJ]PnEd9dT^g6m?I>?3
+IeHQAg<Qnb[_F]ZoiO8OHH0
 R2
 R0
 R3
 R4
 R5
-L0 193
+L0 175
 R6
 r1
 !s85 0
@@ -69,13 +69,13 @@ R9
 !i113 1
 R10
 vtb
-!s110 1762932016
+R1
 !i10b 1
-!s100 g`j2H]D?jI3<S3Y@2m9;h3
-I:m^Qod70U7I_l9iLW;ee>0
+!s100 >JYI1]>BHPUJU8K=@M8?K0
+IoLZh`onP1B[o>k;MH48ZL1
 R2
 R0
-w1762931891
+w1763257001
 8../tb/tb.v
 F../tb/tb.v
 L0 4
@@ -91,14 +91,14 @@ R10
 vtop
 R1
 !i10b 1
-!s100 SI8F_UWnkKQUh5eQ72kEH2
-ICh=>Zfa:HZ@m@MGiHZ7Vj2
+!s100 O5QgIZ4KQ8Q0b>1@eo8QR3
+IzBRDTE?9g;aN3A6ZAgc@50
 R2
 R0
-w1762931884
+w1763256748
 8../top.v
 F../top.v
-L0 5
+L0 7
 R6
 r1
 !s85 0
@@ -191,8 +191,8 @@ R10
 vvga_demo
 R1
 !i10b 1
-!s100 ZzA^[kbZC[mIkX0D@5iz]1
-ID55K>9@0XzeEeRdnRj<RP1
+!s100 U0Ai<oJ_E^lcgniW:1K3Q1
+IZHGU^3B<R4bc08laIA5D23
 R2
 R0
 R3
@@ -231,14 +231,14 @@ R10
 vvga_writer
 R1
 !i10b 1
-!s100 6518g<zfC0M=<?BFEZP4A3
-IeF5Yd7ARXNPBi``9F485<1
+!s100 2lzf@3>EWYbk=9OPX9Wd]0
+I=dmKCh]6=B]eH6NU9KA9n3
 R2
 R0
 R3
 R4
 R5
-L0 37
+L0 47
 R6
 r1
 !s85 0
