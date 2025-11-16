@@ -44,20 +44,113 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   wire [1:0] r_enc_0;
   wire [1:0] r_enc_1;
 
-  // Register file instantiation
-  reg_file reg_file_inst(clock_pulse, we, r_enc_0, r_enc_1, r_write_enc, id_ex_reg_val1, id_ex_reg_val2, wdata); 
+  wire [31:0] rf_out_val1;
+  wire [31:0] rf_out_val2;
+
+  reg_file reg_file_inst(
+      .clk(clock_pulse),
+
+      .we(we),
+      .r_enc_0(r_enc_0),
+      .r_enc_1(r_enc_1),
+
+      .r_write_enc(r_write_enc),
+
+      .reg_out_0(rf_out_val1),
+      .reg_out_1(rf_out_val2),
+
+      .wdata(wdata)
+  );
+
+  // ALU Control 
+  wire [2:0] alu_opcode;
+  wire [31:0] alu_reg_val1;
+  wire [31:0] alu_reg_val2;
+  wire [31:0] alu_result; 
 
   // ALU instantiation
-  ALU alu_inst(id_ex_reg_opcode, ex_mem_reg_arithmetic_result, id_ex_reg_val1, id_ex_reg_val2);
+  ALU alu_inst(
+    .opcode(alu_opcode),
+    .arithmetic_result(alu_result), 
+    .register_value_1(alu_reg_val1),
+    .register_value_2(alu_reg_val2)
+  );
   
-  instr_fetch instr_fetch_inst(clock_pulse, stall, instruction_state, if_id_reg);
-  instr_decode instr_decode_inst(clock_pulse, stall, r_enc_0, r_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
-  instr_execute instr_execute_inst(clock_pulse, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite);
-  instr_mem instr_mem_inst(clock_pulse, ex_mem_regwrite, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, mem_wb_regwrite);
-  instr_wb instr_wb_inst(clock_pulse, mem_wb_regwrite, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, we, r_write_enc, wdata); 
+  instr_fetch instr_fetch_inst(
+      .clk(clock_pulse),
+      .stall(stall),
+      .switches_state(instruction_state),
+      .if_id_reg(if_id_reg)
+  );
+
+  instr_decode instr_decode_inst(
+      .clk(clock_pulse),
+      .stall(stall),
+
+      .rf_enc_0(r_enc_0),
+      .rf_enc_1(r_enc_1),
+
+      .rf_out_val1(rf_out_val1),
+      .rf_out_val2(rf_out_val2),
+
+      .if_id_reg(if_id_reg), 
+
+      .id_ex_reg_val1(id_ex_reg_val1),
+      .id_ex_reg_val2(id_ex_reg_val2), 
+      .id_ex_reg_mode(id_ex_reg_mode),
+      .id_ex_reg_opcode(id_ex_reg_opcode),
+      .id_ex_reg_wb_enc(id_ex_reg_wb_enc),
+      .id_ex_regwrite(id_ex_regwrite)
+  );
+
+  instr_execute instr_execute_inst(
+      .clk(clock_pulse),
+
+      .alu_opcode(alu_opcode),
+      .alu_reg_val1(alu_reg_val1),
+      .alu_reg_val2(alu_reg_val2),
+      .alu_result(alu_result),
+      
+      .id_ex_reg_opcode(id_ex_reg_opcode),
+      .id_ex_reg_val1(id_ex_reg_val1),
+      .id_ex_reg_val2(id_ex_reg_val2),
+      .id_ex_regwrite(id_ex_regwrite),
+      .id_ex_reg_wb_enc(id_ex_reg_wb_enc),
+
+      .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc),
+      .ex_mem_regwrite(ex_mem_regwrite),
+      .ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result)
+  ); 
+  
+  instr_mem instr_mem_inst(
+      .clk(clock_pulse),
+
+      .ex_mem_regwrite(ex_mem_regwrite),
+      .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc),
+      .ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result),
+
+      .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
+      .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
+      .mem_wb_regwrite(mem_wb_regwrite)
+
+  );
+
+  instr_wb instr_wb_inst(
+      .clk(clock_pulse),
+
+      .mem_wb_regwrite(mem_wb_regwrite),
+      .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
+      .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
+
+      .rf_we(we),
+      .rf_w_enc(r_write_enc),
+      .rf_wdata(wdata)
+  );
 
   assign LEDR[9:7] = if_id_reg[6:4];
   assign LEDR[6:4] = id_ex_reg_opcode; 
+  assign LEDR[3:2] = ex_mem_regwrite;
+  assign LEDR[1:0] = mem_wb_regwrite;
 endmodule
 
 // Register file module 
@@ -125,19 +218,26 @@ module instr_fetch(clk, stall, switches_state, if_id_reg);
   end
 endmodule
 
-module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
+module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if_id_reg, id_ex_reg_val1, id_ex_reg_val2, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
   input clk;
   input stall;
   input [7:0] if_id_reg;
+
   
   output reg id_ex_reg_mode;
   output reg [2:0] id_ex_reg_opcode;
   output reg [1:0] id_ex_reg_wb_enc;
   output reg id_ex_regwrite;
 
+  output reg [31:0] id_ex_reg_val1;
+  output reg [31:0] id_ex_reg_val2;
+
   // Register file control
   output reg [1:0] rf_enc_0;
   output reg [1:0] rf_enc_1;
+
+  input [31:0] rf_out_val1;
+  input [31:0] rf_out_val2;
   
   // values will be given by the register file once it is instantiated.
   always @ (posedge clk) begin
@@ -146,26 +246,50 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, i
       id_ex_reg_opcode <= if_id_reg[6:4];
       id_ex_reg_wb_enc <= if_id_reg[3:2];
 
+      id_ex_reg_val1 <= rf_out_val1;
+      id_ex_reg_val2 <= rf_out_val2;
+
       rf_enc_0 <= if_id_reg[3:2];
       rf_enc_1 <= if_id_reg[1:0];
 
-      if (if_id_reg[6:4] != 3'b00) id_ex_regwrite <= 1;
+      if (if_id_reg[6:4] != 3'b000) id_ex_regwrite <= 1;
       else id_ex_regwrite <= 0;
     end
   end
 endmodule
 
-module instr_execute(clk, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite);
+module instr_execute(clk, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id_ex_reg_opcode, id_ex_reg_val1, id_ex_reg_val2, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite, ex_mem_reg_arithmetic_result);
   input clk;
-  input [1:0] id_ex_reg_wb_enc;
+
   input id_ex_regwrite;
+  input [1:0]  id_ex_reg_wb_enc;
+  input [2:0]  id_ex_reg_opcode;
+  input [31:0] id_ex_reg_val1;
+  input [31:0] id_ex_reg_val2;
 
   output reg [1:0] ex_mem_reg_wb_enc;
   output reg ex_mem_regwrite;
+  output reg [31:0] ex_mem_reg_arithmetic_result;
   
+  // ALU controls
+  output reg [2:0] alu_opcode;
+
+  output reg [31:0] alu_reg_val1;
+  output reg [31:0] alu_reg_val2;
+  
+  // ALU output
+  input [31:0] alu_result;
+  
+  // your next work is in this always block making sure everything is read and set
   always @ (posedge clk) begin
+    alu_opcode <= id_ex_reg_opcode; 
+    alu_reg_val1 <= id_ex_reg_val1; 
+    alu_reg_val2 <= id_ex_reg_val2;
+
     ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
     ex_mem_regwrite <= id_ex_regwrite;
+
+    ex_mem_reg_arithmetic_result <= alu_result; // careful of this, I'm not sure if its safe to have this be nonblocking.
   end
 endmodule
 
