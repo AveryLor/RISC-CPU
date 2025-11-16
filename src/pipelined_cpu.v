@@ -25,7 +25,10 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   wire [2:0] id_ex_reg_opcode;
   wire [31:0] id_ex_reg_val1;
   wire [31:0] id_ex_reg_val2;
-  wire [31:0] id_ex_reg_wb_enc; 
+  wire [1:0] id_ex_reg_wb_enc; 
+
+  wire [31:0] ex_mem_reg_arithmetic_result;
+  wire [1:0] ex_mem_reg_wb_enc;
 
 
   // Register file conntrol
@@ -38,6 +41,9 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
 
   // Register file instantiation
   reg_file reg_file_inst(clk, we, r_enc_0, r_enc_1, r_write_enc, id_ex_reg_val1, id_ex_reg_val2, wdata); 
+
+  // ALU instantiation
+  ALU alu_inst(id_ex_opcode, ex_mem_reg_arithmetic_result, id_ex_reg_val1, id_ex_reg_val2);
   
   instr_fetch instr_fetch_inst(clock_pulse, stall, instruction_state, if_id_reg);
   instr_decode instr_decode_inst(clock_pulse, stall, r_enc_0, r_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc);
@@ -79,6 +85,24 @@ module reg_file(clk, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wd
   end
 endmodule
 
+// ALU Module
+module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
+  parameter [2:0] ADD = 3'b001,
+                  INC = 3'b011;
+
+  input [2:0] opcode;
+  input [31:0] register_value_1;
+  input [31:0] register_value_2;
+  
+  output reg [31:0] arithmetic_result;
+  always @ (*) begin
+    case (opcode) 
+      ADD: arithmetic_result <= register_value_1 + register_value_2; 
+      INC: arithmetic_result <= register_value_1 + 1; 
+    endcase
+  end
+endmodule
+
 
 module instr_fetch(clk, stall, switches_state, if_id_reg);
   input clk;
@@ -115,5 +139,14 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, i
       rf_enc_0 <= if_id_reg[3:2];
       rf_enc_1 <= if_id_reg[1:0];
     end
+  end
+endmodule
+
+module instr_execute(clk, id_ex_reg_wb_enc, ex_mem_reg_wb_enc);
+  input [1:0] id_ex_reg_wb_enc;
+  output reg [1:0] ex_mem_reg_wb_enc;
+  
+  always @ (posedge clk) begin
+    ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
   end
 endmodule
