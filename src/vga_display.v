@@ -2,13 +2,8 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, finished_register);
+module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
 	input CLOCK_50;
-	input [3:0] KEY;
-	output [8:0] addr;
-	input  [31:0] register_value;
-	output finished_register;
-	
 	output [7:0] VGA_R;
 	output [7:0] VGA_G;
 	output [7:0] VGA_B;
@@ -20,11 +15,12 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
 	wire [8:0] VGA_X;
 	wire [7:0] VGA_Y;
 	wire [2:0] VGA_COLOR; 
+	input [2:3] KEY; 
 
 	
-	vga_writer writer (CLOCK_50, KEY[0], VGA_X, VGA_Y, VGA_COLOR, SW); // Primary writer for displays 
+	vga_writer writer (CLOCK_50, KEY[2], VGA_X, VGA_Y, VGA_COLOR); // Primary writer for displays 
    vga_adapter VGA (
-		.resetn(KEY[0]),
+		.resetn(KEY[2]),
 		.clock(CLOCK_50),
 		.color(VGA_COLOR),
 		.x(VGA_X),
@@ -39,15 +35,14 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.VGA_CLK(VGA_CLK));
 	defparam VGA.RESOLUTION = "640x480";
-//	defparam VGA.BACKGROUND_IMAGE = "./MIF/bmp_640_9.mif";
+
 endmodule
 
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
 //------------------------------------------------------------------
-module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
+module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
     input wire clock; 
     input wire resetn;
-    input wire [7:0] SW; // For future use
     
     // Outputs to VGA Adapter
     output wire [9:0] VGA_X;    // Corrected width to 10 bits (0-639)
@@ -131,14 +126,14 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     assign column_values[1] = row_idx; // Number identifier 
     assign column_values[2] = 8'd17; // : 
 	 assign column_values[3] = 8'd18; // Space
-    assign column_values[4] = 8'd0; // 0 (Placeholder data)
-	 assign column_values[5] = 8'd0; // 0  
-	 assign column_values[6] = 8'd0; // 0  
-	 assign column_values[7] = 8'd0; // 0  
-	 assign column_values[8] = 8'd0; // 0  
-	 assign column_values[9] = 8'd0; // 0  
-	 assign column_values[10] = 8'd0; // 0 
-	 assign column_values[11] = 8'd0; // 0 
+    assign column_values[4] = 8'd15; // 0 (Placeholder data)
+	 assign column_values[5] = 8'd14; // 0  
+	 assign column_values[6] = 8'd13; // 0  
+	 assign column_values[7] = 8'd12; // 0  
+	 assign column_values[8] = 8'd11; // 0  
+	 assign column_values[9] = 8'd10; // 0  
+	 assign column_values[10] = 8'd9; // 0 
+	 assign column_values[11] = 8'd8; // 0 
     
     // --- Map character to bitmap ---
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
@@ -171,8 +166,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, SW);
     wire pixel_on;
     assign pixel_on = pixels[pixel_y][7-pixel_x];
 
-    // Assign 3-bit color: White (3'b111) if pixel is on, Black (3'b000) if off
-    assign VGA_COLOR = pixel_on ? 3'b111 : 3'b000;
+    assign VGA_COLOR = pixel_on ? 9'b111111111 : 3'b000;
     
     // The plot signal should be asserted only when the VGA adapter is ready to write
 endmodule
@@ -181,7 +175,7 @@ endmodule
 module row_drawer(clock, resetn, finishedCharacter, col_idx, row_idx); 
     input wire clock, resetn, finishedCharacter; 
     output reg [2:0] row_idx; 
-    output reg [1:0] col_idx; // 0 to 3
+    output reg [4:0] col_idx; // 0 to 11
 
     always @(posedge clock or negedge resetn) begin
         if (!resetn) begin
