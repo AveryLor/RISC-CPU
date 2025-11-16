@@ -143,10 +143,25 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, i
 endmodule
 
 module instr_execute(clk, id_ex_reg_wb_enc, ex_mem_reg_wb_enc);
+  input clk;
   input [1:0] id_ex_reg_wb_enc;
   output reg [1:0] ex_mem_reg_wb_enc;
   
   always @ (posedge clk) begin
     ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
+  end
+endmodule
+
+module instr_mem(clk, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result);
+  input clk;
+  input [1:0] ex_mem_reg_wb_enc;
+  input [31:0] ex_mem_reg_arithmetic_result;
+  
+  output reg [1:0] mem_wb_reg_wb_enc;
+  output reg [31:0] mem_wb_reg_arithmetic_result;
+  
+  always @ (posedge clk) begin
+    mem_wb_reg_wb_enc <= ex_mem_reg_wb_enc;
+    mem_wb_reg_arithmetic_result <= ex_mem_reg_arithmetic_result;
   end
 endmodule
