@@ -20,16 +20,21 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   
   // Pipeline registers
   wire [7:0] if_id_reg;
-  
+ 
+  wire id_ex_regwrite;
   wire id_ex_reg_mode;
   wire [2:0] id_ex_reg_opcode;
   wire [31:0] id_ex_reg_val1;
   wire [31:0] id_ex_reg_val2;
   wire [1:0] id_ex_reg_wb_enc; 
-
+  
+  wire ex_mem_regwrite;
   wire [31:0] ex_mem_reg_arithmetic_result;
   wire [1:0] ex_mem_reg_wb_enc;
 
+  wire mem_wb_regwrite;
+  wire mem_wb_reg_wb_enc;
+  wire mem_wb_reg_arithmetic_result;
 
   // Register file conntrol
   wire we;
@@ -46,8 +51,11 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   ALU alu_inst(id_ex_opcode, ex_mem_reg_arithmetic_result, id_ex_reg_val1, id_ex_reg_val2);
   
   instr_fetch instr_fetch_inst(clock_pulse, stall, instruction_state, if_id_reg);
-  instr_decode instr_decode_inst(clock_pulse, stall, r_enc_0, r_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc);
-  
+  instr_decode instr_decode_inst(clock_pulse, stall, r_enc_0, r_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
+  instr_execute instr_execute_inst(clock_pulse, id_ex_regwrite, id_ex-reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite);
+  instr_mem instr_mem_inst(clk, ex_mem_regwrite, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, mem_wb_regwrite);
+  instr_wb instr_wb_inst(clk, mem_wb_regwrite, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, we, r_write_enc, wdata); 
+
   assign LEDR[9:7] = if_id_reg[6:4];
   assign LEDR[6:4] = id_ex_reg_opcode; 
 endmodule
@@ -116,7 +124,7 @@ module instr_fetch(clk, stall, switches_state, if_id_reg);
   end
 endmodule
 
-module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc);
+module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
   input clk;
   input stall;
   input [7:0] if_id_reg;
@@ -124,6 +132,7 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, i
   output reg id_ex_reg_mode;
   output reg [2:0] id_ex_reg_opcode;
   output reg [1:0] id_ex_reg_wb_enc;
+  output reg id_ex_regwrite;
 
   // Register file control
   output reg [1:0] rf_enc_0;
@@ -138,30 +147,59 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, if_id_reg, id_ex_reg_mode, i
 
       rf_enc_0 <= if_id_reg[3:2];
       rf_enc_1 <= if_id_reg[1:0];
+
+      if (id_ex_reg_opcode != 2'b00) id_ex_regwrite <= 1;
+      else id_ex_regwrite <= 0;
     end
   end
 endmodule
 
-module instr_execute(clk, id_ex_reg_wb_enc, ex_mem_reg_wb_enc);
+module instr_execute(clk, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite);
   input clk;
   input [1:0] id_ex_reg_wb_enc;
+  input id_ex_regwrite;
+
   output reg [1:0] ex_mem_reg_wb_enc;
+  output reg ex_mem_regwrite;
   
   always @ (posedge clk) begin
     ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
+    ex_mem_regwrite <= id_ex_regwrite;
   end
 endmodule
 
-module instr_mem(clk, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result);
+module instr_mem(clk, ex_mem_regwrite, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, mem_wb_regwrite);
   input clk;
   input [1:0] ex_mem_reg_wb_enc;
   input [31:0] ex_mem_reg_arithmetic_result;
+  input ex_mem_regwrite;
   
   output reg [1:0] mem_wb_reg_wb_enc;
   output reg [31:0] mem_wb_reg_arithmetic_result;
+  output reg mem_wb_regwrite;
   
   always @ (posedge clk) begin
     mem_wb_reg_wb_enc <= ex_mem_reg_wb_enc;
     mem_wb_reg_arithmetic_result <= ex_mem_reg_arithmetic_result;
+    mem_wb_regwrite <= ex_mem_regwrite;
   end
 endmodule
+
+
+module instr_wb(clk, mem_wb_regwrite, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, rf_we, rf_w_enc, rf_wdata) begin
+  input clk;
+
+  input mem_wb_regwrite;
+  input [1:0] mem_wb_reg_wb_enc;
+  input [31:0] mem_wb_reg_arithmetic_result;
+
+  output reg rf_we;
+  output reg [1:0] rf_w_enc; 
+  output reg [31:0] rf_wdata;
+
+  always @ (posedge clk) begin
+    rf_we <= mem_wb_regwrite;
+    rf_w_enc <= mem_wb_reg_wb_enc; 
+    rf_wdata <= mem_wb_reg_arithmetic_result;
+  end
+end
