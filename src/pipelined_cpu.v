@@ -169,7 +169,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
 endmodule
 
 // Register file module 
-module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata, R0_val, R1_val); 
+module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata, R0_val, R1_val, R2_val, R3_val, R4_val, R5_val, R6_val, R7_val); 
   input we; // Indicates if we are doing a write (write enable)
   input clk;
   input resetn;
@@ -181,6 +181,13 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
 
   output [31:0] R0_val;
   output [31:0] R1_val;
+  output [31:0] R2_val;
+  output [31:0] R3_val;
+  output [31:0] R4_val;
+  output [31:0] R5_val;
+  output [31:0] R6_val;
+  output [31:0] R7_val;
+
   output reg [31:0] reg_out_0;
   output reg [31:0] reg_out_1;
   
@@ -209,6 +216,13 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
 
   assign R0_val = R0;
   assign R1_val = R1;
+  assign R2_val = 32'd1;
+  assign R3_val = 32'd2;
+  assign R4_val = 32'd3;
+  assign R5_val = 32'd4;
+  assign R6_val = 32'd5;
+  assign R7_val = 32'd6;
+
 endmodule
 
 // ALU Module
