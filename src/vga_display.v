@@ -2,7 +2,7 @@
 // This file contains all modules, with corrected signal and logic flows.
 
 // Top-level module for DESim board
-module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file);
 	input CLOCK_50;
 	output [7:0] VGA_R;
 	output [7:0] VGA_G;
@@ -14,18 +14,20 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	output VGA_CLK;
 	wire [8:0] VGA_X;
 	wire [7:0] VGA_Y;
-	wire [2:0] VGA_COLOR; 
-	input [2:3] KEY; 
+	wire [8:0] VGA_COLOR; 
+	input [3:3] KEY; 
+	input [31:0] register_file [7:0]; 
+	
 
 	
-	vga_writer writer (CLOCK_50, KEY[2], VGA_X, VGA_Y, VGA_COLOR); // Primary writer for displays 
+	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays 
    vga_adapter VGA (
-		.resetn(KEY[2]),
+		.resetn(1'b1),
 		.clock(CLOCK_50),
 		.color(VGA_COLOR),
 		.x(VGA_X),
 		.y(VGA_Y),
-		.write(KEY[3]),
+		.write(1'b1),
 		.VGA_R(VGA_R),
 		.VGA_G(VGA_G),
 		.VGA_B(VGA_B),
@@ -38,19 +40,24 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 
 endmodule
 
+module reg_title_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
+
+endmodule 
+
+
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
 //------------------------------------------------------------------
-module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
+module register_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, register_file);
     input wire clock; 
     input wire resetn;
+	 input [31:0] register_file [7:0]; 
     
     // Outputs to VGA Adapter
     output wire [9:0] VGA_X;    // Corrected width to 10 bits (0-639)
     output wire [9:0] VGA_Y;    // Corrected width to 10 bits (0-479)
-    output wire [2:0] VGA_COLOR; // 3-bit color output
+    output wire [8:0] VGA_COLOR; // 3-bit color output
 
-    // --- Internal Logic Signals ---
-    // Character Index Pointers (Updated by char_index_fsm/row_drawer)
+    // Character Index Pointers
     wire [2:0] row_idx; // 0->7 rows
     wire [4:0] col_idx; // 0->11 columns
     
@@ -67,14 +74,14 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
     
     initial begin
         // Y-coordinates corrected to be 10 bits wide
-        y_coordinate[0] = 10;
-        y_coordinate[1] = 25;
-        y_coordinate[2] = 40;
-        y_coordinate[3] = 55;
-        y_coordinate[4] = 70;
-        y_coordinate[5] = 85;
-        y_coordinate[6] = 100;
-        y_coordinate[7] = 115;
+        y_coordinate[0] = 25;
+        y_coordinate[1] = 40;
+        y_coordinate[2] = 55;
+        y_coordinate[3] = 70;
+        y_coordinate[4] = 85;
+        y_coordinate[5] = 100;
+        y_coordinate[6] = 115;
+		  y_coordinate[7] = 130;
     end
 
     // --- Module Instantiations ---
@@ -120,20 +127,20 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
     wire [7:0] column_values [11:0]; 
     
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
-    // For simplicity, let's keep it as an array of regs initialized in an initial block
-    
+    // Example payload: AAAA0001
+    wire [31:0] curRegister = register_file[row_idx]; 
     assign column_values[0] = 8'd16; // R
     assign column_values[1] = row_idx; // Number identifier 
     assign column_values[2] = 8'd17; // : 
 	 assign column_values[3] = 8'd18; // Space
-    assign column_values[4] = 8'd15; // 0 (Placeholder data)
-	 assign column_values[5] = 8'd14; // 0  
-	 assign column_values[6] = 8'd13; // 0  
-	 assign column_values[7] = 8'd12; // 0  
-	 assign column_values[8] = 8'd11; // 0  
-	 assign column_values[9] = 8'd10; // 0  
-	 assign column_values[10] = 8'd9; // 0 
-	 assign column_values[11] = 8'd8; // 0 
+    assign column_values[4] = curRegister[31:28]; //  A
+	 assign column_values[5] = curRegister[27:24]; //   A
+	 assign column_values[6] = curRegister[23:20]; //   A
+	 assign column_values[7] = curRegister[19:16]; //   A
+	 assign column_values[8] = curRegister[15:12]; //   0
+	 assign column_values[9] = curRegister[11:8]; //   0
+	 assign column_values[10] = curRegister[7:4]; //  0
+	 assign column_values[11] = curRegister[3:0]; //  1
     
     // --- Map character to bitmap ---
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
@@ -166,6 +173,7 @@ module vga_writer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
     wire pixel_on;
     assign pixel_on = pixels[pixel_y][7-pixel_x];
 
+	 // Display pixels in white
     assign VGA_COLOR = pixel_on ? 9'b111111111 : 3'b000;
     
     // The plot signal should be asserted only when the VGA adapter is ready to write
