@@ -243,7 +243,6 @@ module instr_fetch(clk, stall, switches_state, if_id_reg);
   end
 endmodule
 
-
 module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if_id_reg, id_ex_reg_val1, id_ex_reg_val2, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
   input clk;
   input stall;
@@ -285,38 +284,38 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if
   end
 endmodule
 
-
 module instr_execute(clk, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id_ex_reg_opcode, id_ex_reg_val1, id_ex_reg_val2, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite, ex_mem_reg_arithmetic_result);
   input clk;
-
-  input id_ex_regwrite;
+  
+  // From ID/EX pipeline
+  input        id_ex_regwrite;
   input [1:0]  id_ex_reg_wb_enc;
   input [2:0]  id_ex_reg_opcode;
   input [31:0] id_ex_reg_val1;
   input [31:0] id_ex_reg_val2;
 
+  // EX/MEM pipeline registers
   output reg [1:0] ex_mem_reg_wb_enc;
   output reg ex_mem_regwrite;
   output reg [31:0] ex_mem_reg_arithmetic_result;
   
-  // ALU controls
-  output reg [2:0] alu_opcode;
+  // To ALU (combinational - wires)  
+  output [2:0] alu_opcode;
 
-  output reg [31:0] alu_reg_val1;
-  output reg [31:0] alu_reg_val2;
+  output [31:0] alu_reg_val1;
+  output [31:0] alu_reg_val2;
   
   // ALU output
   input [31:0] alu_result;
   
-  assign ex_mem_reg_arithmetic_result = alu_result; 
+  assign alu_opcode = id_ex_reg_opcode;
+  assign alu_reg_val1 = id_ex_reg_val1;
+  assign alu_reg_val2 = id_ex_reg_val2;
 
   always @ (posedge clk) begin
-    alu_opcode <= id_ex_reg_opcode; 
-    alu_reg_val1 <= id_ex_reg_val1; 
-    alu_reg_val2 <= id_ex_reg_val2;
-
     ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
     ex_mem_regwrite <= id_ex_regwrite;
+    ex_mem_reg_arithmetic_result <= alu_result;
   end
 endmodule
 
