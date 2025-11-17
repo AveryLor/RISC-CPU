@@ -18,7 +18,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	input [3:3] KEY; 
 	input [31:0] register_file [7:0]; 
 	
-	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays 
+	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays
+	reg_title_drawer rtd(CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR); 
     vga_adapter VGA (
 		.resetn(1'b1),
 		.clock(CLOCK_50),
@@ -196,18 +197,18 @@ module register_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, register_file);
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
     // Example payload: AAAA0001
     wire [31:0] curRegister = register_file[row_idx]; 
-    assign column_values[0] = 8'd16; // R
+    assign column_values[0] = 8'd27; // R
     assign column_values[1] = row_idx; // Number identifier 
-    assign column_values[2] = 8'd17; // : 
-	 assign column_values[3] = 8'd18; // Space
+    assign column_values[2] = 8'd36; // : 
+	assign column_values[3] = 8'd37; // Space
     assign column_values[4] = curRegister[31:28]; //  A
-	 assign column_values[5] = curRegister[27:24]; //   A
-	 assign column_values[6] = curRegister[23:20]; //   A
-	 assign column_values[7] = curRegister[19:16]; //   A
-	 assign column_values[8] = curRegister[15:12]; //   0
-	 assign column_values[9] = curRegister[11:8]; //   0
-	 assign column_values[10] = curRegister[7:4]; //  0
-	 assign column_values[11] = curRegister[3:0]; //  1
+	assign column_values[5] = curRegister[27:24]; //   A
+	assign column_values[6] = curRegister[23:20]; //   A
+	assign column_values[7] = curRegister[19:16]; //   A
+	assign column_values[8] = curRegister[15:12]; //   0
+	assign column_values[9] = curRegister[11:8]; //   0
+	assign column_values[10] = curRegister[7:4]; //  0
+	assign column_values[11] = curRegister[3:0]; //  1
     
     // --- Map character to bitmap ---
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input

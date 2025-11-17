@@ -375,7 +375,7 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b01000000;
 					pixels[7] = 8'b11111110;
 				end
-				36: begin //:
+				36: begin // :
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b01100000;
 					pixels[2] = 8'b01100000;
