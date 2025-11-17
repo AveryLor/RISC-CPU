@@ -6,7 +6,6 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   output [6:0] HEX0;
   output [6:0] HEX1;
 
-
   // Necessary values
   wire [7:0] instruction_state = SW[7:0];
 
@@ -47,10 +46,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   wire [31:0] rf_out_val1;
   wire [31:0] rf_out_val2;
 
+  wire [31:0] R0_val;
+  wire [31:0] R1_val;
+
   reg_file reg_file_inst(
       .clk(clock_pulse),
+      .resetn(resetn),
 
       .we(we),
+
       .r_enc_0(r_enc_0),
       .r_enc_1(r_enc_1),
 
@@ -59,8 +63,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       .reg_out_0(rf_out_val1),
       .reg_out_1(rf_out_val2),
 
-      .wdata(wdata)
+      .wdata(wdata),
+
+      .R0_val(R0_val),
+      .R1_val(R1_val)
   );
+
+  // Hex display for register file
+  display_hex display_hex_inst0(R0_val, HEX0);
+  display_hex display_hex_inst1(R1_val, HEX1);
 
   // ALU Control 
   wire [2:0] alu_opcode;
@@ -146,30 +157,37 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       .rf_w_enc(r_write_enc),
       .rf_wdata(wdata)
   );
-
-  assign LEDR[9:7] = if_id_reg[6:4];
-  assign LEDR[6:4] = id_ex_reg_opcode; 
-  assign LEDR[3:2] = ex_mem_regwrite;
-  assign LEDR[1:0] = mem_wb_regwrite;
+  
+  // Testing decode: 
+  assign LEDR[2:0] = ex_mem_reg_arithmetic_result;
+  assign LEDR[8:7] = mem_wb_reg_wb_enc;
+  assign LEDR[9] = mem_wb_regwrite;
+  //assign LEDR[9:7] = if_id_reg[6:4];
+  //assign LEDR[6:4] = id_ex_reg_opcode; 
+  //assign LEDR[3:2] = ex_mem_regwrite;
+  //assign LEDR[1:0] = mem_wb_regwrite;
 endmodule
 
 // Register file module 
-module reg_file(clk, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata); // this will stay combinational for reads and will become sequential when writes are added.
+module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata, R0_val, R1_val); 
   input we; // Indicates if we are doing a write (write enable)
   input clk;
+  input resetn;
 
   input [1:0] r_enc_0; // Register encodings 
   input [1:0] r_enc_1; 
   input [1:0] r_write_enc;
   input [31:0] wdata;
 
+  output [31:0] R0_val;
+  output [31:0] R1_val;
   output reg [31:0] reg_out_0;
   output reg [31:0] reg_out_1;
   
   // The actual registers =)
   reg [31:0] R0;
   reg [31:0] R1;
-  
+
   // Reading registers
   // We use blocking assignments here because it behaves a little better in simulation.
   always @ (*) begin
@@ -178,12 +196,19 @@ module reg_file(clk, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wd
   end
   
   // Writing to registers.
-  always @ (posedge clk) begin
-    if (we) begin
+  always @ (posedge clk or negedge resetn) begin
+    if (!resetn) begin
+      R0 <= 32'd3;
+      R1 <= 32'd3;
+    end
+    else if (we) begin
       if (r_write_enc == 2'b00) R0 <= wdata;
       else R1 <= wdata; 
     end
   end
+
+  assign R0_val = R0;
+  assign R1_val = R1;
 endmodule
 
 // ALU Module
@@ -218,6 +243,7 @@ module instr_fetch(clk, stall, switches_state, if_id_reg);
   end
 endmodule
 
+
 module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if_id_reg, id_ex_reg_val1, id_ex_reg_val2, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
   input clk;
   input stall;
@@ -233,11 +259,15 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if
   output reg [31:0] id_ex_reg_val2;
 
   // Register file control
-  output reg [1:0] rf_enc_0;
-  output reg [1:0] rf_enc_1;
+  output [1:0] rf_enc_0;
+  output [1:0] rf_enc_1;
 
   input [31:0] rf_out_val1;
   input [31:0] rf_out_val2;
+  
+  // Must be purely combinational to get timing right.
+  assign rf_enc_0 = if_id_reg[3:2];
+  assign rf_enc_1 = if_id_reg[1:0];
   
   // values will be given by the register file once it is instantiated.
   always @ (posedge clk) begin
@@ -249,14 +279,12 @@ module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if
       id_ex_reg_val1 <= rf_out_val1;
       id_ex_reg_val2 <= rf_out_val2;
 
-      rf_enc_0 <= if_id_reg[3:2];
-      rf_enc_1 <= if_id_reg[1:0];
-
       if (if_id_reg[6:4] != 3'b000) id_ex_regwrite <= 1;
       else id_ex_regwrite <= 0;
     end
   end
 endmodule
+
 
 module instr_execute(clk, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id_ex_reg_opcode, id_ex_reg_val1, id_ex_reg_val2, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite, ex_mem_reg_arithmetic_result);
   input clk;
@@ -280,7 +308,8 @@ module instr_execute(clk, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id
   // ALU output
   input [31:0] alu_result;
   
-  // your next work is in this always block making sure everything is read and set
+  assign ex_mem_reg_arithmetic_result = alu_result; 
+
   always @ (posedge clk) begin
     alu_opcode <= id_ex_reg_opcode; 
     alu_reg_val1 <= id_ex_reg_val1; 
@@ -288,8 +317,6 @@ module instr_execute(clk, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id
 
     ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
     ex_mem_regwrite <= id_ex_regwrite;
-
-    ex_mem_reg_arithmetic_result <= alu_result; // careful of this, I'm not sure if its safe to have this be nonblocking.
   end
 endmodule
 
@@ -327,4 +354,47 @@ module instr_wb(clk, mem_wb_regwrite, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_r
     rf_w_enc <= mem_wb_reg_wb_enc; 
     rf_wdata <= mem_wb_reg_arithmetic_result;
   end
+endmodule
+
+/* Hex display module for displaying first few bytes of the registers on the hex displays*/
+module display_hex(input [3:0] dig, output [6:0] HEX);
+    reg [6:0] temp;
+    assign HEX = temp;   // connect internal signal to output
+
+    always @ (*) begin
+        if (dig == 4'h0)
+            temp = 7'b1000000;  // 0
+        else if (dig == 4'h1)
+            temp = 7'b1111001;  // 1
+        else if (dig == 4'h2)
+            temp = 7'b0100100;  // 2
+        else if (dig == 4'h3)
+            temp = 7'b0110000;  // 3
+        else if (dig == 4'h4)
+            temp = 7'b0011001;  // 4
+        else if (dig == 4'h5)
+            temp = 7'b0010010;  // 5
+        else if (dig == 4'h6)
+            temp = 7'b0000010;  // 6
+        else if (dig == 4'h7)
+            temp = 7'b1111000;  // 7
+        else if (dig == 4'h8)
+            temp = 7'b0000000;  // 8
+        else if (dig == 4'h9)
+            temp = 7'b0010000;  // 9
+        else if (dig == 4'hA)
+            temp = 7'b0001000;  // A
+        else if (dig == 4'hB)
+            temp = 7'b0000011;  // b
+        else if (dig == 4'hC)
+            temp = 7'b1000110;  // C
+        else if (dig == 4'hD)
+            temp = 7'b0100001;  // d
+        else if (dig == 4'hE)
+            temp = 7'b0000110;  // E
+        else if (dig == 4'hF)
+            temp = 7'b0001110;  // F
+        else
+            temp = 7'b1111111;  // display off (invalid input)
+    end
 endmodule
