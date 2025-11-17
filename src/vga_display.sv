@@ -17,10 +17,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [8:0] VGA_COLOR; 
 	input [3:3] KEY; 
 	input [31:0] register_file [7:0]; 
+
 	
-	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays
-	reg_title_drawer rtd(CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR); 
-    vga_adapter VGA (
+	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays 
+   vga_adapter VGA (
 		.resetn(1'b1),
 		.clock(CLOCK_50),
 		.color(VGA_COLOR),
@@ -39,86 +39,12 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 
 endmodule
 
-module reg_title_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR);
-	input clock; 
-	input resetn; 
-
-	wire [4:0] col_idx; // 0->16 columns
-
-	wire [7:0] title[0:15]; // 16-character title
-
-	assign title[0]  = 8'd16; // G
-	assign title[1]  = 8'd14; // E
-	assign title[2]  = 8'd23; // N
-	assign title[3]  = 8'd14; // E
-	assign title[4]  = 8'd27; // R
-	assign title[5]  = 8'd10; // A
-	assign title[6]  = 8'd21; // L
-	assign title[7]  = 8'd37; // space
-	assign title[8]  = 8'd27; // R
-	assign title[9]  = 8'd14; // E
-	assign title[10] = 8'd16; // G
-	assign title[11] = 8'd18; // I
-	assign title[12] = 8'd28; // S
-	assign title[13] = 8'd29; // T
-	assign title[14] = 8'd14; // E
-	assign title[15] = 8'd27; // R
-
-	
-	reg [4:0] char_idx; // 0->15
-	always @(posedge clock or negedge resetn) begin
-		if (!resetn) begin
-			pixel_x <= 0;
-			pixel_y <= 0;
-			char_idx <= 0;
-		end else begin
-			if (pixel_x == 7) begin
-				pixel_x <= 0;
-				if (pixel_y == 7) begin
-					pixel_y <= 0;
-					if (char_idx < 16)
-						char_idx <= char_idx + 1;
-					else
-						char_idx <= 0; // wrap-around or stop
-				end else begin
-					pixel_y <= pixel_y + 1;
-				end
-			end else begin
-				pixel_x <= pixel_x + 1;
-			end
-		end
-	end
-	wire [63:0] pixelLine;
-	character bmp_inst (
-		.digit(title[char_idx]),
-		.pixelLine(pixelLine)
-	);
-
-	// Each character is 8 pixels wide, with 1 pixel spacing
-	assign VGA_X = 10 + (char_idx * 9) + pixel_x; 
-	assign VGA_Y =10 + pixel_y; // You can set the vertical base
-
-	wire [7:0] pixels [7:0];
-	assign pixels[0] = pixelLine[7:0];
-	assign pixels[1] = pixelLine[15:8];
-	assign pixels[2] = pixelLine[23:16];
-	assign pixels[3] = pixelLine[31:24];
-	assign pixels[4] = pixelLine[39:32];
-	assign pixels[5] = pixelLine[47:40];
-	assign pixels[6] = pixelLine[55:48];
-	assign pixels[7] = pixelLine[63:56];
-
-	wire pixel_on = pixels[pixel_y][7-pixel_x];
-	assign VGA_COLOR = pixel_on ? 9'b111111111 : 3'b000;
-endmodule 
-
 
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
-//------------------------------------------------------------------
 module register_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, register_file);
     input wire clock; 
     input wire resetn;
-	input [31:0] register_file [7:0]; 
+	 input [31:0] register_file [7:0]; 
     
     // Outputs to VGA Adapter
     output wire [9:0] VGA_X;    // Corrected width to 10 bits (0-639)
@@ -197,18 +123,18 @@ module register_drawer(clock, resetn, VGA_X, VGA_Y, VGA_COLOR, register_file);
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
     // Example payload: AAAA0001
     wire [31:0] curRegister = register_file[row_idx]; 
-    assign column_values[0] = 8'd27; // R
+    assign column_values[0] = 8'd16; // R
     assign column_values[1] = row_idx; // Number identifier 
-    assign column_values[2] = 8'd36; // : 
-	assign column_values[3] = 8'd37; // Space
+    assign column_values[2] = 8'd17; // : 
+	 assign column_values[3] = 8'd18; // Space
     assign column_values[4] = curRegister[31:28]; //  A
-	assign column_values[5] = curRegister[27:24]; //   A
-	assign column_values[6] = curRegister[23:20]; //   A
-	assign column_values[7] = curRegister[19:16]; //   A
-	assign column_values[8] = curRegister[15:12]; //   0
-	assign column_values[9] = curRegister[11:8]; //   0
-	assign column_values[10] = curRegister[7:4]; //  0
-	assign column_values[11] = curRegister[3:0]; //  1
+	 assign column_values[5] = curRegister[27:24]; //   A
+	 assign column_values[6] = curRegister[23:20]; //   A
+	 assign column_values[7] = curRegister[19:16]; //   A
+	 assign column_values[8] = curRegister[15:12]; //   0
+	 assign column_values[9] = curRegister[11:8]; //   0
+	 assign column_values[10] = curRegister[7:4]; //  0
+	 assign column_values[11] = curRegister[3:0]; //  1
     
     // --- Map character to bitmap ---
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
@@ -412,7 +338,6 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b00000010;
 					pixels[7] = 8'b00000010;
 				end
-				// Uppercase A-Z
 				10: begin // A
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b01111000;
@@ -422,258 +347,68 @@ module character(digit, pixelLine);
 					pixels[5] = 8'b10000100;
 					pixels[6] = 8'b10000100;
 					pixels[7] = 8'b10000100;
-				end
-				11: begin // B
+				 end
+				 11: begin // B
 					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
+					pixels[1] = 8'b11110000;
+					pixels[2] = 8'b10001000;
+					pixels[3] = 8'b10001000;
 					pixels[4] = 8'b11111000;
 					pixels[5] = 8'b10000100;
 					pixels[6] = 8'b10000100;
 					pixels[7] = 8'b11111000;
-				end
-				12: begin // C
+				 end
+				 12: begin // C
 					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000010;
+					pixels[1] = 8'b01111110;
+					pixels[2] = 8'b10000000;
 					pixels[3] = 8'b10000000;
 					pixels[4] = 8'b10000000;
 					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b01111100;
+					pixels[6] = 8'b10000000;
+					pixels[7] = 8'b01111110;
+				 end
+				 13: begin // D
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b11111000;
+					pixels[2] = 8'b10000100;
+					pixels[3] = 8'b10000100;
+					pixels[4] = 8'b10000100;
+					pixels[5] = 8'b10000100;
+					pixels[6] = 8'b10000100;
+					pixels[7] = 8'b11111000;
+				 end
+				 14: begin // E
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b11111110;
+					pixels[2] = 8'b10000000;
+					pixels[3] = 8'b10000000;
+					pixels[4] = 8'b11111100;
+					pixels[5] = 8'b10000000;
+					pixels[6] = 8'b10000000;
+					pixels[7] = 8'b11111110;
+				 end
+				 15: begin // F
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b11111110;
+					pixels[2] = 8'b10000000;
+					pixels[3] = 8'b10000000;
+					pixels[4] = 8'b11111100;
+					pixels[5] = 8'b10000000;
+					pixels[6] = 8'b10000000;
+					pixels[7] = 8'b10000000;
 				end
-				13: begin // D
+				16: begin // R
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b11110000;
 					pixels[2] = 8'b10001000;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b11110000;
+					pixels[3] = 8'b10001000;
+					pixels[4] = 8'b11110000;
+					pixels[5] = 8'b10100000;
+					pixels[6] = 8'b10010000;
+					pixels[7] = 8'b10001000;
 				end
-				14: begin // E
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111100;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b11111100;
-				end
-				15: begin // F
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111100;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b10000000;
-				end
-				16: begin // G
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000010;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b10001110;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b01111100;
-				end
-				17: begin // H
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b10000100;
-				end
-				18: begin // I
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b00010000;
-					pixels[3] = 8'b00010000;
-					pixels[4] = 8'b00010000;
-					pixels[5] = 8'b00010000;
-					pixels[6] = 8'b00010000;
-					pixels[7] = 8'b01111100;
-				end
-				19: begin // J
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00011110;
-					pixels[2] = 8'b00001000;
-					pixels[3] = 8'b00001000;
-					pixels[4] = 8'b00001000;
-					pixels[5] = 8'b10001000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b01110000;
-				end
-				20: begin // K
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10001000;
-					pixels[3] = 8'b10010000;
-					pixels[4] = 8'b11100000;
-					pixels[5] = 8'b10010000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b10000100;
-				end
-				21: begin // L
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000000;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b10000000;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b11111100;
-				end
-				22: begin // M
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000010;
-					pixels[2] = 8'b11000110;
-					pixels[3] = 8'b10101010;
-					pixels[4] = 8'b10010010;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b10000010;
-				end
-				23: begin // N
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000010;
-					pixels[2] = 8'b11000010;
-					pixels[3] = 8'b10100010;
-					pixels[4] = 8'b10010010;
-					pixels[5] = 8'b10001010;
-					pixels[6] = 8'b10000110;
-					pixels[7] = 8'b10000010;
-				end
-				24: begin // O
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
-				end
-				25: begin // P
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111000;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b10000000;
-				end
-				26: begin // Q
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10010100;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b01110100;
-				end
-				27: begin // R
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111000;
-					pixels[5] = 8'b10010000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b10000100;
-				end
-				28: begin // S
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b01111100;
-					pixels[4] = 8'b00000100;
-					pixels[5] = 8'b00000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
-				end
-				29: begin // T
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b00100000;
-					pixels[3] = 8'b00100000;
-					pixels[4] = 8'b00100000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b00100000;
-				end
-				30: begin // U
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
-				end
-				31: begin // V
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b01001000;
-					pixels[6] = 8'b00110000;
-					pixels[7] = 8'b00000000;
-				end
-				32: begin // W
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10010010;
-					pixels[4] = 8'b10101010;
-					pixels[5] = 8'b10101010;
-					pixels[6] = 8'b01000100;
-					pixels[7] = 8'b00000000;
-				end
-				33: begin // X
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b01001000;
-					pixels[3] = 8'b00110000;
-					pixels[4] = 8'b00110000;
-					pixels[5] = 8'b01001000;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b00000000;
-				end
-				34: begin // Y
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b01001000;
-					pixels[3] = 8'b00110000;
-					pixels[4] = 8'b00100000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b00100000;
-				end
-				35: begin // Z
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b00000100;
-					pixels[3] = 8'b00001000;
-					pixels[4] = 8'b00010000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b01000000;
-					pixels[7] = 8'b11111110;
-				end
-				36: begin //:
+				17: begin //:
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b01100000;
 					pixels[2] = 8'b01100000;
@@ -682,8 +417,9 @@ module character(digit, pixelLine);
 					pixels[5] = 8'b01100000;
 					pixels[6] = 8'b01100000;
 					pixels[7] = 8'b00000000;					
-				end	
-				37: begin // space (null char)
+				end
+					
+				18: begin // space (null char)
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b00000000;
 					pixels[2] = 8'b00000000;
