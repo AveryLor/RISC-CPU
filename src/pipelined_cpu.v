@@ -92,7 +92,6 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
       .clk(clock_pulse),
       .stall(stall)
 	  .pc(), // add 16-bit program counter here
-      .switches_state(instruction_state),
       .if_id_reg(if_id_reg)
   );
 
@@ -244,12 +243,12 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
 endmodule
 
 
-module instr_fetch(clk, stall, pc, switches_state, if_id_reg);
+module instr_fetch(clk, stall, pc, if_id_reg);
   input clk;
   input stall;
   input [15:0] pc;				// program counter (new)
-  input [7:0] switches_state; 	// no longer used
   output [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
+  // removed input [7:0] switches_state
   
   /* START OF NEW ADDITIONS */
   // This module will be defined by quartus. 
