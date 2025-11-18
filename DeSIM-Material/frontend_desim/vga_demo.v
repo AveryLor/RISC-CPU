@@ -38,8 +38,21 @@ module vga_demo(CLOCK_50, KEY, addr, register_value, VGA_R, VGA_G, VGA_B, VGA_HS
 		.VGA_BLANK_N(VGA_BLANK_N),
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.VGA_CLK(VGA_CLK));
+	
+	vga_adapter VGA(
+            .resetn(KEY[0]),
+            .clock(CLOCK_50),
+            color(VGA_COLOR),
+            .x(VGA_X), 
+			.y(VGA_Y), 
+			write(KEY[3]),
+            VGA
+            VGA_COLOR, 
+            VGA_SYNC,
+            plot);
+
 	defparam VGA.RESOLUTION = "640x480";
-//	defparam VGA.BACKGROUND_IMAGE = "./MIF/bmp_640_9.mif";
+	defparam VGA.BACKGROUND_IMAGE = "./MIF/Z_bmp_160_6.mif";
 endmodule
 
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).

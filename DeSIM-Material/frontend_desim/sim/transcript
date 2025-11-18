@@ -1,5 +1,5 @@
 # vsim -pli "C:\Users\avery\OneDrive\Desktop\Desim\modelsim.vpi" -Lf 220model -Lf altera_mf_ver -Lf verilog -t 1ns -c -do "run -all" tb 
-# Start time: 20:39:35 on Nov 15,2025
+# Start time: 00:17:16 on Nov 16,2025
 # Loading work.tb
 # Loading work.vga_demo
 # Loading work.vga_writer
@@ -8,11 +8,29 @@
 # Loading work.char_bitmap
 # Loading work.vga_adapter
 # Loading work.vga_convert
-# ** Error: (vsim-3389) ../tb/tb.v(26): Port 'SW' not found in the connected module (6th connection).
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT File: ../vga_demo.v
-# ** Fatal: (vsim-3365) ../tb/tb.v(26): Too many port connections. Expected 13, found 14.
-#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(25): [PCDPC] - Port size (10) does not match connection size (9) for port 'VGA_X'. The port definition is at: ../vga_demo.v(47).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/writer File: ../vga_demo.v
+# ** Warning: (vsim-3015) ../vga_demo.v(25): [PCDPC] - Port size (10) does not match connection size (8) for port 'VGA_Y'. The port definition is at: ../vga_demo.v(47).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/writer File: ../vga_demo.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_R' not found in the connected module (7th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_G' not found in the connected module (8th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_B' not found in the connected module (9th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_HS' not found in the connected module (10th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_VS' not found in the connected module (11th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_BLANK_N' not found in the connected module (12th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_SYNC_N' not found in the connected module (13th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Error: (vsim-3389) ../vga_demo.v(26): Port 'VGA_CLK' not found in the connected module (14th connection).
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
+# ** Fatal: (vsim-3365) ../vga_demo.v(26): Too many port connections. Expected 11, found 14.
+#    Time: 0 ns  Iteration: 0  Instance: /tb/DUT/VGA File: ../vga_adapter/vga_adapter.v
 # FATAL ERROR while loading design
 # Error loading design
-# End time: 20:39:36 on Nov 15,2025, Elapsed time: 0:00:01
-# Errors: 2, Warnings: 0
+# End time: 00:17:16 on Nov 16,2025, Elapsed time: 0:00:00
+# Errors: 9, Warnings: 2

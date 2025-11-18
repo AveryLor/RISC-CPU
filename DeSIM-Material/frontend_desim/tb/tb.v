@@ -6,7 +6,6 @@ module tb();
 // === Input Signals (reg) ===
     reg CLOCK_50 = 1'b0;
     reg [3:0] KEY = 4'b1111; // KEY[0] is active-low reset
-    reg [7:0] SW = 8'h00; // Assumed input for vga_writer
     reg [31:0] register_value = 32'hFEEDF00D; // Input from simulation environment
 
 // === Output Signals (wire) ===
@@ -30,10 +29,7 @@ module tb();
         // Simulation Interface
         .addr(addr),
         .register_value(register_value),
-        .finished_register(finished_register),
-
-        // Assumed 'SW' input
-        .SW(SW), 
+        .finished_register(finished_register), 
         // VGA Output Ports
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
