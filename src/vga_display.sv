@@ -16,9 +16,9 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [9:0] VGA_X; // Previously 8:0
 	wire [8:0] VGA_Y; // Previously 7:0 
 	wire [8:0] VGA_COLOR; 
-	input [0:0] KEY; 
+	input [1:1] KEY; 
 	input [31:0] register_file [7:0]; 
-	wire resetn = KEY[0]; 
+	wire resetn = KEY[1]; 
 
 	// Control wires
 	wire [9:0] title_x, title_y; // For title drawing
@@ -42,7 +42,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	// Title -> Register -> Pipeline drawing
 	always @(posedge CLOCK_50) begin
 		if (!resetn) begin
-			state <= DRAW_TITLE
+			state <= DRAW_TITLE; 
 		end
 		case (state) 
 			DRAW_TITLE: begin
@@ -52,7 +52,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			end
 			DRAW_REGISTERS: begin  
 				if (register_done) begin
-					state <= DRAW_PIPELINE; 	 
+					state <= DRAW_REGISTERS; 	 
 				end
 			end
 			DRAW_PIPELINE: begin
@@ -68,11 +68,14 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	assign VGA_X = (state == DRAW_TITLE) ? title_x : regs_x;
 	assign VGA_Y = (state == DRAW_TITLE) ? title_y : regs_y;
 	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color : regs_color;
+	
+	wire [31:0] test_input 8'hAAAAAAAA; 
 
-	reg_title_drawer rtd (CLOCK_50, KEY[0], title_x, title_y, title_color, title_done); 
-    register_drawer rd (CLOCK_50, KEY[0], regs_x, regs_y, regs_color, register_file, register_done); // Primary writer for displays 
-    vga_adapter VGA (
-		.resetn(KEY[0]),
+	reg_title_drawer rtd (CLOCK_50, resetn, title_x, title_y, title_color, title_done); 
+   register_drawer rd (CLOCK_50, resetn, regs_x, regs_y, regs_color, register_file, register_done); // Primary writer for displays 
+	pipeline_drawer(CLOCK_50, resetn, test_input, test_input, test_input, test_input, test_input, pipeline_x, pipeline_y, pipeline_color, pipeline_done);
+   vga_adapter VGA (
+		.resetn(resetn),
 		.clock(CLOCK_50),
 		.color(VGA_COLOR),
 		.x(VGA_X),
@@ -91,7 +94,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 endmodule
 
 module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_DATA_OUT, WB_DATA_IN, pipeline_x, pipeline_y, pipeline_color, pipeline_done); 
-	input clock;  
+	 input clock;  
     input resetn; 
     
     // Data from control unit (example registers)
@@ -105,15 +108,15 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     output wire [9:0] pipeline_x;    // 10-bit X coordinate
     output wire [8:0] pipeline_y;    // 9-bit Y coordinate
     output wire [8:0] pipeline_color; // 9-bit color output
-    output wire pipeline_done // Set high when all drawing is complete
+    output wire pipeline_done; // Set high when all drawing is complete
 
-	localparam NUM_STAGES = 5;
+	 localparam NUM_STAGES = 5;
     localparam LABEL_WIDTH = 3; // e.g., "IF "
     localparam DATA_WIDTH = 8;  // 8 hex digits (32 bits)
     localparam CHARS_PER_LINE = LABEL_WIDTH + DATA_WIDTH; // 11
     localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE; // 55
     
-    localparam START_X = 50;
+    localparam START_X = 300;
     localparam START_Y = 150;
     localparam CHAR_SPACING = 9; // 8 pixels + 1 spacing
     localparam LINE_HEIGHT = 10; // 8 pixels + 2 spacing
@@ -246,9 +249,9 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	// Standard inputs
 	input clock; 
 	input resetn; 
-	output wire [9:0] title_x,    // 10-bit X coordinate
-    output wire [8:0] title_y,    // 9-bit Y coordinate
-    output wire [8:0] title_color // 9-bit color output
+	output wire [9:0] title_x;    // 10-bit X coordinate
+   output wire [8:0] title_y;    // 9-bit Y coordinate
+   output wire [8:0] title_color; // 9-bit color output
 	output wire title_done; 
 
 	// Spelling out title
@@ -313,14 +316,14 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	assign title_done = char_drawer_done; 
 endmodule 
 
-module char_drawer_logic(clock, resetn, char_count, done, char_idx, done); 
-	input clock, 
-    input resetn,
-    input [4:0] char_count, // Max number of characters to draw (e.g., 16)
-    output reg done,        // Set high when all characters are drawn
-    output reg [4:0] char_idx, // Current character index (0 to CHAR_COUNT-1)
-    output reg [2:0] pixel_x,  // Current pixel column (0 to 7)
-    output reg [2:0] pixel_y   // Current pixel row (0 to 7)
+module char_drawer_logic(clock, resetn, char_count, done, char_idx, done, pixel_x, pixel_y); 
+	input clock; 
+    input resetn; 
+    input [4:0] char_count; // Max number of characters to draw (e.g., 16)
+    output reg done;        // Set high when all characters are drawn
+    output reg [4:0] char_idx; // Current character index (0 to CHAR_COUNT-1)
+    output reg [2:0] pixel_x;  // Current pixel column (0 to 7)
+    output reg [2:0] pixel_y;   // Current pixel row (0 to 7)
 
 	// Draws out the title 
     always @(posedge clock or negedge resetn) begin
@@ -441,18 +444,18 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
     // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
     // Example payload: AAAA0001
     wire [31:0] curRegister = register_file[row_idx]; 
-    assign column_values[0] = 8'd16; // R
+    assign column_values[0] = 8'd27; // R
     assign column_values[1] = row_idx; // Number identifier 
-    assign column_values[2] = 8'd17; // : 
-	assign column_values[3] = 8'd18; // Space
+    assign column_values[2] = 8'd36; // : 
+	 assign column_values[3] = 8'd37; // Space
     assign column_values[4] = curRegister[31:28]; //  A
-	assign column_values[5] = curRegister[27:24]; //   A
-	assign column_values[6] = curRegister[23:20]; //   A
-	assign column_values[7] = curRegister[19:16]; //   A
-	assign column_values[8] = curRegister[15:12]; //   0
-	assign column_values[9] = curRegister[11:8]; //   0
-	assign column_values[10] = curRegister[7:4]; //  0
-	assign column_values[11] = curRegister[3:0]; //  1
+	 assign column_values[5] = curRegister[27:24]; //   A
+	 assign column_values[6] = curRegister[23:20]; //   A
+	 assign column_values[7] = curRegister[19:16]; //   A
+	 assign column_values[8] = curRegister[15:12]; //   0
+	 assign column_values[9] = curRegister[11:8]; //   0
+	 assign column_values[10] = curRegister[7:4]; //  0
+	 assign column_values[11] = curRegister[3:0]; //  1
     
     // --- Map character to bitmap ---
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
@@ -487,12 +490,8 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
 
 	 // Display pixels in white
     assign regs_color = pixel_on ? 9'b111111111 : 3'b000;
-    
-    if (row_idx == 7 && col_idx == 11) begin
-		assign register_done = 1'b1; 
-	end else begin
-		assign register_done = 1'b0; 
-	end
+	 assign register_done = (row_idx == 7 && col_idx == 11); 
+
 endmodule
 
 // Increments row
@@ -924,7 +923,7 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b01000000;
 					pixels[7] = 8'b11111110;
 				end
-				36: begin //:
+				36: begin // :
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b01100000;
 					pixels[2] = 8'b01100000;
