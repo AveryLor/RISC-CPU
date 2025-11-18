@@ -19,8 +19,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	input [31:0] register_file [7:0]; 
 
 	
-	register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays 
-   vga_adapter VGA (
+    register_drawer rd (CLOCK_50, 1'b1, VGA_X, VGA_Y, VGA_COLOR, register_file); // Primary writer for displays 
+    vga_adapter VGA (
 		.resetn(1'b1),
 		.clock(CLOCK_50),
 		.color(VGA_COLOR),
