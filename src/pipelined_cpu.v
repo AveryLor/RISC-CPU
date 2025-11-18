@@ -16,6 +16,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
 
   // Registers
   wire [31:0] IR; // Special purpose
+  /* Should add 16-bit pc register when program counter is implemented. */
   
   // Pipeline registers
   wire [7:0] if_id_reg;
@@ -89,7 +90,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   
   instr_fetch instr_fetch_inst(
       .clk(clock_pulse),
-      .stall(stall),
+      .stall(stall)
+	  .pc(), // add 16-bit program counter here
       .switches_state(instruction_state),
       .if_id_reg(if_id_reg)
   );
@@ -242,16 +244,40 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
 endmodule
 
 
-module instr_fetch(clk, stall, switches_state, if_id_reg);
+module instr_fetch(clk, stall, pc, switches_state, if_id_reg);
   input clk;
   input stall;
-  input [7:0] switches_state; 
-  output reg [7:0] if_id_reg;  
+  input [15:0] pc;				// program counter (new)
+  input [7:0] switches_state; 	// no longer used
+  output [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
+  
+  /* START OF NEW ADDITIONS */
+  // This module will be defined by quartus. 
+  // In Quartus, name the BRAM instr_rom, set width = 32, depth = 65536, use a single clock, and initialize it with a .mif.
+  
+  instr_rom instr_rom(
+	.address(pc),
+	.clock(clk),
+	.data()
+	.wren(0),
+	.q(if_id_reg);
 
+	input	[15:0]  address;
+	input	clock;
+	input	[7:0]  data;
+	input	wren;
+	output	[7:0]  q;
+  );
+  
+  /* END OF NEW ADDITIONS */
+
+  // If you want to stall here, just keep the program counter static instead.
+  /*
   always @ (posedge clk) begin 
     if (stall == 0) if_id_reg <= switches_state;
     else if_id_reg <= if_id_reg;
   end
+  */
 endmodule
 
 module instr_decode(clk, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if_id_reg, id_ex_reg_val1, id_ex_reg_val2, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite);
