@@ -194,10 +194,10 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   );
   
   // Testing decode: 
-  assign LEDR[9:7] = if_id_reg[6:4];
-  assign LEDR[6:4] = ex_instruct[6:4];
-  assign LEDR[3:2] = mem_instruct[6:4];
-  assign LEDR[1:0] = wb_instruct[6:4];
+  assign LEDR[9:8] = if_id_reg[5:4];
+  assign LEDR[7:6] = ex_instruct[5:4];
+  assign LEDR[5:4] = mem_instruct[5:4];
+  assign LEDR[3:2] = wb_instruct[5:4];
 endmodule
 
 // Register file module 
@@ -231,8 +231,8 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
   // Writing to registers.
   always @ (negedge clk or negedge resetn) begin
     if (!resetn) begin
-      R0 <= 32'd3;
-      R1 <= 32'd3;
+      R0 <= 32'd0;
+      R1 <= 32'd0;
     end
     else if (we) begin
       if (r_write_enc == 2'b00) R0 <= wdata;
@@ -492,7 +492,6 @@ module HDU(ID_instruct, EX_instruct, MEM_instruct, WB_instruct, stall, out);
     end
     else stall = 0;
   end
-
   assign out = stall;
 endmodule
 
