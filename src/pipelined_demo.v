@@ -88,6 +88,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   wire [31:0] alu_reg_val2;
   wire [31:0] alu_result; 
 
+  wire bs;
+
   // ALU instantiation
   ALU alu_inst(
     .opcode(alu_opcode),
@@ -101,10 +103,10 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
     .ID_instruct(if_id_reg),
     .EX_instruct(ex_instruct),
     .MEM_instruct(mem_instruct),
-    .WB_instruct(wb_instruct)
+    .WB_instruct(wb_instruct),
 
     .stall(stall),
-    .out(LEDR[0])
+    .out(bs)
   );
   
   instr_fetch instr_fetch_inst(
@@ -172,7 +174,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
 
       .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
       .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
-      .mem_wb_regwrite(mem_wb_regwrite)
+      .mem_wb_regwrite(mem_wb_regwrite),
 
       .mem_instruct(mem_instruct),
       .wb_instruct(wb_instruct)
@@ -195,6 +197,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
   assign LEDR[9:7] = if_id_reg[6:4];
   assign LEDR[6:4] = ex_instruct[6:4];
   assign LEDR[3:2] = mem_instruct[6:4];
+  assign LEDR[1:0] = wb_instruct[6:4];
 endmodule
 
 // Register file module 
@@ -226,7 +229,7 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
   end
   
   // Writing to registers.
-  always @ (posedge clk or negedge resetn) begin
+  always @ (negedge clk or negedge resetn) begin
     if (!resetn) begin
       R0 <= 32'd3;
       R1 <= 32'd3;
@@ -330,14 +333,12 @@ module instr_decode(clk, resetn, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_
       else id_ex_regwrite <= 0;
     end
     else begin
-      id_ex_regwrite <= 0;
       id_ex_reg_mode <= 1'b0;
       id_ex_reg_opcode <= NOP;
       id_ex_reg_wb_enc <= 2'b00;
       id_ex_reg_val1 <= 32'd0;
       id_ex_reg_val2 <= 32'd0;
       id_ex_regwrite <= 1'b0;
-
       ex_instruct <= {1'b0, NOP, 2'b00, 2'b00};
     end
   end
@@ -393,6 +394,7 @@ module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_re
 endmodule
 
 module instr_mem(clk, resetn, ex_mem_regwrite, ex_mem_reg_wb_enc, ex_mem_reg_arithmetic_result, mem_wb_reg_wb_enc, mem_wb_reg_arithmetic_result, mem_wb_regwrite, mem_instruct, wb_instruct);
+  parameter [2:0] NOP = 3'b000;
   input clk;
   input resetn;
 
