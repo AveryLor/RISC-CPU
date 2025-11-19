@@ -48,8 +48,13 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 
   wire [31:0] R0_val;
   wire [31:0] R1_val;
+  
+  wire [31:0] regiser_tracker [7:0]; 
+  output [31:0] register_file [7:0]; 
+  assign register_file = regiser_tracker; 
 
-  reg_file reg_file_inst(
+ 
+  reg_file rfi(
       .clk(clock_pulse),
       .resetn(resetn),
 
@@ -66,8 +71,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .wdata(wdata),
 
       .R0_val(R0_val),
-      .R1_val(R1_val), 
-      .register_output(register_file)
+      .R1_val(R1_val),
+		.register_output(regiser_tracker) 
   );
 
   // Hex display for register file
@@ -191,6 +196,11 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
   // The actual registers =)
   reg [31:0] R0;
   reg [31:0] R1;
+  reg [31:0] R2;
+  reg [31:0] R3;
+  reg [31:0] R4;
+  reg [31:0] R5;
+  reg [31:0] R6;
 
   // Reading registers
   // We use blocking assignments here because it behaves a little better in simulation.
@@ -211,14 +221,14 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
     end
   end
 
-  assign register_output[0] = 0;
-  assign register_output[1] = 32'hAAAA0001;
-  assign register_output[2] = 32'hAAAA0002; 
-  assign register_output[3] = 32'hAAAA0003;
-  assign register_output[4] = 32'hAAAA0004;
-  assign register_output[5] = 32'hAAAA0005;
-  assign register_output[6] = 32'hAAAA0006;
-  assign register_output[7] = 32'hAAAA0007;
+  assign register_output[0] = R0;
+  assign register_output[1] = R1;
+  assign register_output[2] = 8'hABCDEFAA; 
+  assign register_output[3] = 8'hAAAAAAAA;
+  assign register_output[4] = 8'hAAAAAAAA;
+  assign register_output[5] = 8'hAAAAAAAA;
+  assign register_output[6] = 8'hAAAAAAAA;
+  assign register_output[7] = 8'hAAAAAAAA;
 
 endmodule
 
