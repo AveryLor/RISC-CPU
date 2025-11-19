@@ -142,3 +142,50 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     assign pipeline_color = pixel_on ? 9'b111111111 : 3'b000;
 
 endmodule
+
+
+module char_drawer_logic(clock, resetn, char_count, done, char_idx, done, pixel_x, pixel_y); 
+	input clock; 
+    input resetn; 
+    input [4:0] char_count; // Max number of characters to draw (e.g., 16)
+    output reg done;        // Set high when all characters are drawn
+    output reg [4:0] char_idx; // Current character index (0 to CHAR_COUNT-1)
+    output reg [2:0] pixel_x;  // Current pixel column (0 to 7)
+    output reg [2:0] pixel_y;   // Current pixel row (0 to 7)
+
+	// Draws out the title 
+    always @(posedge clock or negedge resetn) begin
+        if (!resetn) begin
+            pixel_x <= 0;
+            pixel_y <= 0;
+            char_idx <= 0;
+            done <= 1'b0;
+        end else begin
+            // Clear done signal at the start of a cycle
+            done <= 1'b0;
+            
+            if (char_idx == char_count) begin
+                // If we've drawn all characters, set done and reset
+                done <= 1'b1;
+                pixel_x <= 0;
+                pixel_y <= 0;
+                char_idx <= 0;
+            end else begin
+                // Iterate through X pixels (0 -> 7)
+                if (pixel_x == 7) begin 
+                    pixel_x <= 0;
+                    // Iterate through Y pixels (0 -> 7)
+                    if (pixel_y == 7) begin
+                        pixel_y <= 0;
+                        // Iterate through characters (0 -> CHAR_COUNT-1)
+                        char_idx <= char_idx + 1;
+                    end else begin
+                        pixel_y <= pixel_y + 1; 
+                    end
+                end else begin
+                    pixel_x <= pixel_x + 1; 
+                end
+            end
+        end
+    end
+endmodule
