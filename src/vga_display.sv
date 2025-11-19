@@ -16,16 +16,16 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [9:0] VGA_X; // Previously 8:0
 	wire [8:0] VGA_Y; // Previously 7:0 
 	wire [8:0] VGA_COLOR; 
-	input [1:1] KEY; 
-	input [31:0] register_file [7:0]; 
-	wire resetn = KEY[1]; 
+   input [0:0] KEY; 
+   input [31:0] register_file [7:0]; 
+	wire resetn = KEY[0]; 
 
 	// Control wires
 	wire [9:0] title_x, title_y; // For title drawing
 	wire [8:0] title_color;  
 	wire title_done; 
 	
-	wire [9:0] regs_x, regs_y; // For register drawing 
+	wire [9:0] regs_x, regs_y; // For register drawiWng 
 	wire [8:0] regs_color;
 	wire register_done; 
 
@@ -34,7 +34,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire pipeline_done; 
 	
 	// FSM control for drawing 
-	reg[1:0] state; 
+	reg [2:0] state; 
 	parameter DRAW_TITLE = 3'b001;
 	parameter DRAW_REGISTERS = 3'b010; 
 	parameter DRAW_PIPELINE = 3'b100; 
@@ -52,7 +52,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			end
 			DRAW_REGISTERS: begin  
 				if (register_done) begin
-					state <= DRAW_REGISTERS; 	 
+					state <= DRAW_PIPELINE; 
 				end
 			end
 			DRAW_PIPELINE: begin
@@ -65,15 +65,18 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	end
 
 	// Selects which pointer to follow based off of FSM
-	assign VGA_X = (state == DRAW_TITLE) ? title_x : regs_x;
-	assign VGA_Y = (state == DRAW_TITLE) ? title_y : regs_y;
-	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color : regs_color;
+	assign VGA_X = (state == DRAW_TITLE) ? title_x 
+						: (state == DRAW_REGISTERS) ? regs_x : pipeline_x;
+	assign VGA_Y = (state == DRAW_TITLE) ? title_y 
+						: (state == DRAW_REGISTERS) ? regs_y : pipeline_y;
+	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color 
+						: (state == DRAW_REGISTERS) ? regs_color : pipeline_color;
 	
-	wire [31:0] test_input 8'hAAAAAAAA; 
+	wire [31:0] test_input = 8'hAAAAAAAA; 
 
 	reg_title_drawer rtd (CLOCK_50, resetn, title_x, title_y, title_color, title_done); 
-    register_drawer rd (CLOCK_50, resetn, regs_x, regs_y, regs_color, register_file, register_done); // Primary writer for displays 
-	pipeline_drawer(CLOCK_50, resetn, test_input, test_input, test_input, test_input, test_input, pipeline_x, pipeline_y, pipeline_color, pipeline_done);
+   register_drawer rd (CLOCK_50, resetn, regs_x, regs_y, regs_color, register_file, register_done); // Primary writer for displays 
+	pipeline_drawer pd (CLOCK_50, resetn, test_input, test_input, test_input, test_input, test_input, pipeline_x, pipeline_y, pipeline_color, pipeline_done);
     vga_adapter VGA (
 		.resetn(resetn),
 		.clock(CLOCK_50),
@@ -90,6 +93,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.VGA_CLK(VGA_CLK));
 	defparam VGA.RESOLUTION = "640x480";
+	
+	defparam VGA.BACKGROUND_IMAGE = "./bmp_640_9.mif";
 
 endmodule
 
@@ -110,10 +115,10 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     output wire [8:0] pipeline_color; // 9-bit color output
     output wire pipeline_done; // Set high when all drawing is complete
 
-	// Drawing parameters
-	localparam NUM_STAGES = 5;
+	 // Drawing parameters
+	 localparam NUM_STAGES = 5;
     localparam LABEL_WIDTH = 5; // e.g., "IF://"
-    localparam DATA_WIDTH = 8;  // 8 hex digits (32 bits)
+    localparam DATA_WIDTH = 8;  // 8 hex digits DATA_WIDTH(32 bits)
     localparam CHARS_PER_LINE = LABEL_WIDTH + DATA_WIDTH; // 13
     localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE; // 65
     
@@ -128,7 +133,7 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
 	
     // Wires from Character Logic ---
     wire char_drawer_done;
-    wire [5:0] char_idx; // Needs to be wide enough for MAX_CHARS (55)
+    wire [7:0] char_idx; // Needs to be wide enough for MAX_CHARS (55)
     wire [2:0] pixel_x;
     wire [2:0] pixel_y;
     
@@ -153,7 +158,7 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     );
 
 	// Connect done signal
-    assign pipe_done = char_drawer_done;
+    assign pipeline_done = char_drawer_done;
 
     // Select the 32-bit value corresponding to the current drawing stage
     always @(*) begin
@@ -174,36 +179,38 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     // Stage 0: IF
     assign stage_labels[0][0] = 8'd18; // 'I'
     assign stage_labels[0][1] = 8'd15; // 'F'
-	assign stage_labels[0][2] = 8'd36; // ':'
+	 assign stage_labels[0][2] = 8'd36; // ':'
     assign stage_labels[0][3] = 8'd37; // ' '
-	assign stage_labels[0][4] = 8'd37; // ' '
+	 assign stage_labels[0][4] = 8'd37; // ' '
     // Stage 1: ID
     assign stage_labels[1][0] = 8'd18; // 'I'
     assign stage_labels[1][1] = 8'd13; // 'D'
-	assign stage_labels[1][2] = 8'd36; // ':'
+	 assign stage_labels[1][2] = 8'd36; // ':'
     assign stage_labels[1][3] = 8'd37; // ' '
-	assign stage_labels[0][4] = 8'd37; // ' '
+	 assign stage_labels[1][4] = 8'd37; // ' '
     
 	// Stage 2: EX
     assign stage_labels[2][0] = 8'd14; // 'E'
     assign stage_labels[2][1] = 8'd33; // 'X'
     assign stage_labels[2][2] = 8'd36; // ':'
-	assign stage_labels[2][3] = 8'd37; // ' '
-	assign stage_labels[2][4] = 8'd37; // ' '
+	 assign stage_labels[2][3] = 8'd37; // ' '
+	 assign stage_labels[2][4] = 8'd37; // ' '
 
     // Stage 3: MEM
     assign stage_labels[3][0] = 8'd22; // 'M'
     assign stage_labels[3][1] = 8'd14; // 'E'
     assign stage_labels[3][2] = 8'd22; // 'M'
-	assign stage_labels[3][3] = 8'd36; // ':'
-	assign stage_labels[3][4] = 8'd37; // ' '
+	 assign stage_labels[3][3] = 8'd36; // ':'
+	 assign stage_labels[3][4] = 8'd37; // ' '
     
 	// Stage 4: WB
     assign stage_labels[4][0] = 8'd32; // 'W'
     assign stage_labels[4][1] = 8'd11; // 'B'
-	assign stage_labels[4][3] = 8'd36; // ':'
-    assign stage_labels[4][2] = 8'd37; // ' '
+	assign stage_labels[4][2] = 8'd36; // ':'
+    assign stage_labels[4][3] = 8'd37; // ' '
 	assign stage_labels[4][4] = 8'd37; // ' '
+	
+	
 
     // --- Character ROM Input Selection ---
     wire [7:0] char_ascii; // ASCII code of the character to draw
@@ -234,7 +241,7 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
     wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8]; 
     wire pixel_on = current_row[7 - pixel_x];
     
-    assign pipe_color = pixel_on ? 9'b111111111 : 3'b000;
+    assign pipeline_color = pixel_on ? 9'b111111111 : 3'b000;
 
 endmodule
 
@@ -244,8 +251,8 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	input clock; 
 	input resetn; 
 	output wire [9:0] title_x;    // 10-bit X coordinate
-    output wire [8:0] title_y;    // 9-bit Y coordinate
-    output wire [8:0] title_color; // 9-bit color output
+   output wire [8:0] title_y;    // 9-bit Y coordinate
+   output wire [8:0] title_color; // 9-bit color output
 	output wire title_done; 
 
 	// Spelling out title
@@ -269,7 +276,7 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	assign title[16] = 8'd28; // S
 
 	// Keeps track of drawing logic 
-	parameter max_chars = 17 
+	parameter max_chars = 17;
 	wire char_drawer_done;
 	reg [5:0] char_idx; // 0->16
 	reg [2:0] pixel_x; // 0->7 for character width 
@@ -311,10 +318,10 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	assign title_done = char_drawer_done; 
 endmodule 
 
-module char_drawer_logic(clock, resetn, char_count, done, char_idx, done, pixel_x, pixel_y); 
+module char_drawer_logic(clock, resetn, char_count, done, char_idx, pixel_x, pixel_y); 
 	input clock; 
     input resetn; 
-    input [4:0] char_count; // Max number of characters to draw (e.g., 16)
+    input [7:0] char_count; // Max number 128
     output reg done;        // Set high when all characters are drawn
     output reg [4:0] char_idx; // Current character index (0 to CHAR_COUNT-1)
     output reg [2:0] pixel_x;  // Current pixel column (0 to 7)
