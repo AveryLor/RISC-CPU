@@ -1,4 +1,4 @@
-module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, PC_value, IR_value);
+module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, PC_value, IR_value, ram);
 	// Input ports
 	input CLOCK_50;
 	output [7:0] VGA_R;
@@ -17,6 +17,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	input [31:0] PC_value;    // Program Counter input
 	input [31:0] IR_value;    // Instruction Register input
 	wire resetn = KEY[0];
+	input [31:0] ram [7:0]; 
 
 	// Control wires for title
 	wire [9:0] title_x, title_y;
@@ -43,21 +44,35 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [8:0] memory_color;
 	wire memory_done;
 	
+	// Control wires memory title
+	wire [9:0] memory_title_x, memory_title_y;
+	wire [8:0] memory_title_color;
+	wire memory_title_done;
+	
+	// Control wires pipeline title
+	wire [9:0] pipeline_title_x, pipeline_title_y;
+	wire [8:0] pipeline_title_color;
+	wire pipeline_title_done;
+	
 	// FSM control for drawing
-	reg [2:0] state;
-	reg [2:0] next_state;
-	parameter DRAW_TITLE = 3'b001;
-	parameter DRAW_REGISTERS = 3'b010;
-	parameter DRAW_PIPELINE = 3'b011;
-	parameter DRAW_PC_IR = 3'b100;
-	parameter DRAW_MEMORY = 3'b101;
+	reg [3:0] state;
+	reg [3:0] next_state;
+	parameter DRAW_TITLE = 4'b0001;
+	parameter DRAW_REGISTERS = 4'b0010;
+	parameter DRAW_PIPELINE = 4'b0011;
+	parameter DRAW_PC_IR = 4'b0100;
+	parameter DRAW_MEMORY = 4'b0101;
+	parameter DRAW_MEMORY_TITLE = 4'b0110;
+	parameter DRAW_PIPELINE_TITLE = 4'b0111; 
 
 	// Separate done signal detection
 	reg title_done_prev;
 	reg register_done_prev;
 	reg pipeline_done_prev;
 	reg pc_ir_done_prev;
-	reg memory_done_prev; 
+	reg memory_done_prev;
+	reg memory_title_done_prev; 
+	reg pipeline_title_done_prev; 
 	
 	always @(posedge CLOCK_50 or negedge resetn) begin
 		if (!resetn) begin
@@ -65,13 +80,17 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			register_done_prev <= 1'b0;
 			pipeline_done_prev <= 1'b0;
 			pc_ir_done_prev <= 1'b0;
-			memory_done_prev <= 1'b0; 
+			memory_done_prev <= 1'b0;
+			memory_title_done_prev <= 1'b0;
+			pipeline_title_done_prev <= 1'b0; 
 		end else begin
 			title_done_prev <= title_done;
 			register_done_prev <= register_done;
 			pipeline_done_prev <= pipeline_done;
 			pc_ir_done_prev <= pc_ir_done;
 			memory_done_prev <= memory_done; 
+			memory_title_done_prev <= memory_title_done; 
+			pipeline_title_done_prev <= pipeline_title_done; 
 		end
 	end
 
@@ -121,9 +140,25 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			
 			DRAW_MEMORY: begin
 				if (memory_done == 1'b1) begin
-					next_state = DRAW_TITLE;
+					next_state = DRAW_MEMORY_TITLE;
 				end else begin
 					next_state = DRAW_MEMORY;
+				end
+			end
+			
+			DRAW_MEMORY_TITLE: begin
+				if (memory_title_done == 1'b1) begin
+					next_state = DRAW_PIPELINE_TITLE;
+				end else begin
+					next_state = DRAW_MEMORY_TITLE; 
+				end
+			end
+			
+			DRAW_PIPELINE_TITLE: begin
+				if (pipeline_title_done == 1'b1) begin
+					next_state = DRAW_TITLE;
+				end else begin
+					next_state = DRAW_PIPELINE_TITLE; 
 				end
 			end
 			
@@ -139,37 +174,35 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire pipeline_local_resetn = resetn && (state == DRAW_PIPELINE);
 	wire pc_ir_local_resetn = resetn && (state == DRAW_PC_IR);
 	wire memory_local_resetn = resetn && (state == DRAW_MEMORY); 
+	wire memory_title_local_resetn = resetn && (state == DRAW_MEMORY_TITLE); 
+	wire pipeline_title_resetn = resetn && (state == DRAW_PIPELINE_TITLE); 
 
 	// MUX for output selection
 	assign VGA_X = (state == DRAW_TITLE) ? title_x 
 					: (state == DRAW_REGISTERS) ? regs_x 
 					: (state == DRAW_PIPELINE) ? pipeline_x 
 					: (state == DRAW_PC_IR) ? pc_ir_x
-					: memory_x; 
+					: (state == DRAW_MEMORY) ? memory_x
+					: (state == DRAW_MEMORY_TITLE) ? memory_title_x
+					: pipeline_title_x; 
 	
 	assign VGA_Y = (state == DRAW_TITLE) ? title_y 
 					: (state == DRAW_REGISTERS) ? regs_y 
 					: (state == DRAW_PIPELINE) ? pipeline_y 
 					: (state == DRAW_PC_IR) ? pc_ir_y
-					: memory_y;
+					: (state == DRAW_MEMORY) ? memory_y
+					: (state == DRAW_MEMORY_TITLE) ? memory_title_y
+					: pipeline_title_y;
 	
 	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color 
 					: (state == DRAW_REGISTERS) ? regs_color 
 					: (state == DRAW_PIPELINE) ? pipeline_color 
 					: (state == DRAW_PC_IR) ? pc_ir_color
-					: memory_color;
+					: (state == DRAW_MEMORY) ? memory_color
+					: (state == DRAW_MEMORY_TITLE) ? memory_title_color
+					: pipeline_title_color;
 	
 	wire [31:0] test_input = 32'hAAAAAAAA;
-	
-	wire [31:0] memory [7:0];
-	assign memory[0] = 32'hAAAAAAAA;
-	assign memory[1] = 32'hAAAAAAAA;
-	assign memory[2] = 32'hAAAAAAAA;
-	assign memory[3] = 32'hAAAAAAAA;
-	assign memory[4] = 32'hAAAAAAAA;
-	assign memory[5] = 32'hAAAAAAAA;
-	assign memory[6] = 32'hAAAAAAAA;
-	assign memory[7] = 32'hAAAAAAAA;
 
 
 	// Instantiate all drawing modules
@@ -219,12 +252,30 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	
 	memory_drawer m_d (
 		.clock(CLOCK_50), 
-		.resetn(resetn), 
-		.memory(memory), 
+		.resetn(memory_local_resetn), 
+		.memory(ram), 
 		.memory_x(memory_x), 
 		.memory_y(memory_y), 
 		.memory_color(memory_color), 
 		.memory_done(memory_done)
+	); 
+	
+	memory_title(
+		.clock(CLOCK_50), 
+		.resetn(memory_title_local_resetn), 
+		.vga_x(memory_title_x), 
+		.vga_y(memory_title_y), 
+		.vga_color(memory_title_color), 
+		.done(memory_title_done)
+	);
+	
+	pipeline_title_drawer(
+		.clock(CLOCK_50), 
+		.resetn(pipeline_title_resetn), 
+		.title_x(pipeline_title_x), 
+		.title_y(pipeline_title_y), 
+		.title_color(pipeline_title_color), 
+		.title_done(pipeline_title_done)
 	); 
 
 	vga_adapter VGA (
@@ -249,8 +300,181 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 
 endmodule
 
+// Draws out the title above the register
+module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
+	// Standard inputs
+	input clock; 
+	input resetn; 
+	output wire [9:0] title_x;    // 10-bit X coordinate
+   output wire [8:0] title_y;    // 9-bit Y coordinate
+   output wire [8:0] title_color; // 9-bit color output
+	output wire title_done; 
+
+	// Spelling out title "PIPELINE:"
+    wire [7:0] title[0:8]; // 9-character title
+    assign title[0] = 8'd25; // P
+    assign title[1] = 8'd18;  // I
+    assign title[2] = 8'd25; // P
+    assign title[3] = 8'd14;  // E
+    assign title[4] = 8'd21; // L
+    assign title[5] = 8'd18;  // I
+    assign title[6] = 8'd23; // N
+    assign title[7] = 8'd14;  // E
+    assign title[8] = 8'd36; // ':' (example code for colon, adjust to your character map)
+
+    // Keeps track of drawing logic 
+    parameter max_chars = 9;
+    wire char_drawer_done;
+    reg [5:0] char_idx; // 0 -> 8
+    reg [2:0] pixel_x;  // 0 -> 7 for character width
+    reg [2:0] pixel_y;  // 0 -> 7 for character height
+
+    char_drawer_logic cdl_inst (
+        .clock(clock), 
+        .resetn(resetn), 
+        .char_count(max_chars), 
+        .done(char_drawer_done), 
+        .char_idx(char_idx), 
+        .pixel_x(pixel_x), 
+        .pixel_y(pixel_y)
+    );
+
+    wire [63:0] pixelLine;
+    character bmp_inst (
+        .digit(title[char_idx]),
+        .pixelLine(pixelLine)
+    );
+
+    // Each character is 8 pixels wide, with 1 pixel spacing
+    assign title_x = 300 + (char_idx * 9) + pixel_x; 
+    assign title_y = 10 + pixel_y; // vertical base
+
+    wire [7:0] pixels [7:0];
+    assign pixels[0] = pixelLine[7:0];
+    assign pixels[1] = pixelLine[15:8];
+    assign pixels[2] = pixelLine[23:16];
+    assign pixels[3] = pixelLine[31:24];
+    assign pixels[4] = pixelLine[39:32];
+    assign pixels[5] = pixelLine[47:40];
+    assign pixels[6] = pixelLine[55:48];
+    assign pixels[7] = pixelLine[63:56];
+
+    wire pixel_on = pixels[pixel_y][7-pixel_x];
+    assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
+
+    // Final analysis for if drawing is done
+    assign title_done = char_drawer_done; 
+
+endmodule
+
+
+module memory_title(clock, resetn, vga_x, vga_y, vga_color, done);
+
+	 input clock;
+    input resetn;
+    output logic [9:0]  vga_x; 
+    output logic [8:0]  vga_y; 
+    output logic [8:0]  vga_color; 
+    output logic done;
+
+    // Parameters
+    parameter num_rows = 2;  // "CPU RAM:" + header row
+    parameter chars_per_row = 20; // max characters per row
+    parameter max_chars = num_rows * chars_per_row;
+
+    // Pixel tracking
+    logic [6:0] char_idx;  // 0 -> max_chars-1
+    logic [2:0] pixel_x;
+    logic [2:0] pixel_y;
+    logic char_drawer_done;
+
+    // Character drawer instance
+    char_drawer_logic cdl_inst (
+        .clock(clock),
+        .resetn(resetn),
+        .char_count(max_chars),
+        .done(char_drawer_done),
+        .char_idx(char_idx),
+        .pixel_x(pixel_x),
+        .pixel_y(pixel_y)
+    );
+
+    // Determine row and position
+    wire [3:0] row_num = char_idx / chars_per_row;
+    wire [4:0] char_in_row = char_idx % chars_per_row;
+
+    // Character code
+    wire [7:0] char_code;
+
+    always @ (posedge clock) begin
+        case (row_num)
+            0: begin
+                // Row 0: "CPU RAM:"
+                case (char_in_row)
+                    0: char_code = 8'd12; // C
+                    1: char_code = 8'd25; // P 
+                    2: char_code = 8'd30; // U
+                    3: char_code = 8'd37; // space
+                    4: char_code = 8'd27; // R
+                    5: char_code = 8'd10; // A
+                    6: char_code = 8'd22; // M
+                    7: char_code = 8'd36; // :
+                    default: char_code = 8'd37;
+                endcase
+            end
+            1: begin
+                // Row 1: "    +0 +1 +2 +3"
+                case (char_in_row)
+                    0,1,2,3: char_code = 8'd37; // leading spaces
+                    4: char_code = 8'd38; // +
+                    5: char_code = 8'd0; // 0 
+                    6: char_code = 8'd37; // space
+                    7: char_code = 8'd38; // +
+                    8: char_code = 8'd1; // 1
+                    9: char_code = 8'd37; // space
+                    10: char_code = 8'd38; // + 
+                    11: char_code = 8'd2; // 2
+                    12: char_code = 8'd37; // space
+                    13: char_code = 8'd38; // + 
+                    14: char_code = 8'd3; // 3 
+                    default: char_code = 8'd37; // space
+                endcase
+            end
+            default: char_code = " ";
+        endcase
+    end
+
+    // Character bitmap
+    logic [63:0] pixelLine;
+    character bmp_inst (
+        .digit(char_code),
+        .pixelLine(pixelLine)
+    );
+
+    // Map pixel coordinates
+    assign vga_x = 15 + (char_in_row * 9) + pixel_x;
+    assign vga_y = 310 + (row_num * 15) + pixel_y;
+
+    // Pixel color
+    logic [7:0] pixels [7:0];
+    assign pixels[0] = pixelLine[7:0];
+    assign pixels[1] = pixelLine[15:8];
+    assign pixels[2] = pixelLine[23:16];
+    assign pixels[3] = pixelLine[31:24];
+    assign pixels[4] = pixelLine[39:32];
+    assign pixels[5] = pixelLine[47:40];
+    assign pixels[6] = pixelLine[55:48];
+    assign pixels[7] = pixelLine[63:56];
+
+    assign vga_color = pixels[pixel_y][7-pixel_x] ? 9'b111111111 : 9'b000000000;
+
+    // Done signal
+    assign done = char_drawer_done;
+
+endmodule
+
 // Draws memory contents on screen
-// Format: FF: 00 00 00 00 (8 rows)
+// Format: 0: 00 00 00 00 (8 rows)
 module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, memory_done);
 	// Standard inputs
 	input clock; 
@@ -263,9 +487,13 @@ module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, me
 	output wire [8:0] memory_color; // 9-bit color output
 	output wire memory_done;
 	
-	// Each row is: "FF: 00 00 00 00" = 14 characters
-	// 8 rows total = 112 characters
-	parameter chars_per_row = 14;
+	// Logic for tracking address's 
+	wire [7:0] addr = row_num * 4;
+	wire [3:0] addr_high = addr[7:4]; // Second digit
+	wire [3:0] addr_low  = addr[3:0]; // First digit
+	
+	// 15 * 8 charcters 
+	parameter chars_per_row = 15;
 	parameter num_rows = 8;
 	parameter max_chars = chars_per_row * num_rows; // 112
 	
@@ -292,63 +520,42 @@ module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, me
 	wire [31:0] current_mem = memory[row_num];
 	
 	// Build character code for this position
-	// Layout: "FF: 00 00 00 00"
+	// Layout: "00: 00 00 00 00"
 	// Positions: 0-1 = address (FF), 2 = :, 3 = space
-	//           4-5 = byte0, 6 = space, 7-8 = byte1, 9 = space, 10-11 = byte2, 12 = space, 13-14 = byte3
-	// Wait, that's 15 chars. Let me recount: F F : sp 0 0 sp 0 0 sp 0 0 sp 0 0
-	// That's: 0=F, 1=F, 2=:, 3=sp, 4=0, 5=0, 6=sp, 7=0, 8=0, 9=sp, 10=0, 11=0, 12=sp, 13=0
-	// Actually it's 14 chars: "FF: 00 00 00 00" let me break it down:
-	// F F : (space) 0 0 (space) 0 0 (space) 0 0 (space) 0 0
-	// 0 1 2 3       4 5 6       7 8 9       10 11 12      13 14 - that's 15
-	// Let me count again: FF: = 3 chars (0,1,2), space = 1 char (3), 
-	// 00 = 2 chars (4,5), space = 1 char (6), 00 = 2 chars (7,8), space = 1 char (9),
-	// 00 = 2 chars (10,11), space = 1 char (12), 00 = 2 chars (13,14)
-	// Total = 15 characters. Update max_chars:
 	
 	wire [7:0] char_code;
 	
 	always @(*) begin
 		case (char_in_row)
 			// Address bytes (FF, FE, FD, ... F8)
-			0: char_code = hex_to_char(4'hF); // First F in address
-			1: char_code = hex_to_char(4'hF - row_num); // Second hex digit of address
+			0: char_code = addr_high; // First F in address
+			1: char_code = addr_low; // Second hex digit of address
 			
 			2: char_code = 8'd36; // ':'
 			3: char_code = 8'd37; // space
 			
 			// Byte 0 (bits 31:24)
-			4: char_code = hex_to_char(current_mem[31:28]);
-			5: char_code = hex_to_char(current_mem[27:24]);
+			4: char_code = current_mem[31:28];
+			5: char_code = current_mem[27:24];
 			6: char_code = 8'd37; // space
 			
 			// Byte 1 (bits 23:16)
-			7: char_code = hex_to_char(current_mem[23:20]);
-			8: char_code = hex_to_char(current_mem[19:16]);
+			7: char_code = current_mem[23:20];
+			8: char_code = current_mem[19:16];
 			9: char_code = 8'd37; // space
 			
 			// Byte 2 (bits 15:8)
-			10: char_code = hex_to_char(current_mem[15:12]);
-			11: char_code = hex_to_char(current_mem[11:8]);
+			10: char_code = current_mem[15:12];
+			11: char_code = current_mem[11:8];
 			12: char_code = 8'd37; // space
 			
 			// Byte 3 (bits 7:0)
-			13: char_code = hex_to_char(current_mem[7:4]);
-			14: char_code = hex_to_char(current_mem[3:0]);
+			13: char_code = current_mem[7:4];
+			14: char_code = current_mem[3:0];
 			
 			default: char_code = 8'd37; // space
 		endcase
 	end
-	
-	// Function to convert 4-bit hex to character code
-	function [7:0] hex_to_char(input [3:0] hex_digit);
-		begin
-			if (hex_digit < 10) begin
-				hex_to_char = 8'd0 + hex_digit;        // 0-9 map to char codes 0-9
-			end else begin
-				hex_to_char = 8'd10 + (hex_digit - 10); // A-F map to char codes 10-15
-			end
-		end
-	endfunction
 	
 	// Get character bitmap
 	wire [63:0] pixelLine;
@@ -359,8 +566,8 @@ module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, me
 	
 	// Each character is 8 pixels wide, with 1 pixel spacing
 	// Start at X=300, Y=200
-	assign memory_x = 25 + (char_in_row * 9) + pixel_x;
-	assign memory_y = 350 + (row_num * 15) + pixel_y;
+	assign memory_x = 15 + (char_in_row * 9) + pixel_x;
+	assign memory_y = 340 + (row_num * 15) + pixel_y;
 	
 	// Decode pixel data
 	wire [7:0] pixels [7:0];
@@ -1285,15 +1492,15 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b00110000;
 					pixels[7] = 8'b00000000;
 				end
-				32: begin // W - Fixed
+				32: begin // W
 					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10010010;
-					pixels[4] = 8'b10101010;
-					pixels[5] = 8'b10010010;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b00000000;
+					pixels[1] = 8'b10000001;
+					pixels[2] = 8'b10000001;
+					pixels[3] = 8'b10000001;
+					pixels[4] = 8'b10011001;
+					pixels[5] = 8'b10011001;
+					pixels[6] = 8'b10100101;
+					pixels[7] = 8'b10100101;
 				end
 				33: begin // X
 					pixels[0] = 8'b00000000;
@@ -1345,6 +1552,16 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b00000000;
 					pixels[7] = 8'b00000000;
 				 end
+				38: begin // +
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b00001000;
+					pixels[2] = 8'b00001000;
+					pixels[3] = 8'b00001000;
+					pixels[4] = 8'b01111111;
+					pixels[5] = 8'b00001000;
+					pixels[6] = 8'b00001000;
+					pixels[7] = 8'b00001000;
+				end
 				default: begin // space (null char)
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b00000000;
