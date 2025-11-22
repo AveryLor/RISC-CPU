@@ -109,12 +109,11 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
     .out(bs)
   );
   
+
   instr_fetch instr_fetch_inst(
       .clk(clock_pulse),
-      .resetn(resetn),
-      .stall(stall),
-
-      .switches_state(instruction_state),
+      .stall(stall)
+	  .pc(), // add 16-bit program counter here
       .if_id_reg(if_id_reg)
   );
 
