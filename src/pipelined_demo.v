@@ -263,21 +263,32 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
   end
 endmodule
 
-
-module instr_fetch(clk, resetn, stall, switches_state, if_id_reg);
+module instr_fetch(clk, stall, pc, if_id_reg);
   input clk;
-  input resetn;
   input stall;
+  input [15:0] pc;				// program counter (new)
+  output [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
+  // removed input [7:0] switches_state
+  
+  /* START OF NEW ADDITIONS */
+  // This module will be defined by quartus. 
+  // In Quartus, name the BRAM instr_rom, set width = 32, depth = 65536, use a single clock, and initialize it with a .mif.
+  
+  instr_rom instr_rom(
+	.address(pc),
+	.clock(clk),
+	.data()
+	.wren(0),
+	.q(if_id_reg);
 
-  input [7:0] switches_state; 
-  output reg [7:0] if_id_reg;  
-
-  always @ (posedge clk or negedge resetn) begin 
-    if (!resetn) if_id_reg <= 8'b0; // NOP
-    else if (stall == 0) if_id_reg <= switches_state;
-    else if_id_reg <= if_id_reg;
-  end
-endmodule
+	input	[15:0]  address;
+	input	clock;
+	input	[7:0]  data;
+	input	wren;
+	output	[7:0]  q;
+  );
+  
+  /* END OF NEW ADDITIONS */
 
 module instr_decode(clk, resetn, stall, rf_enc_0, rf_enc_1, rf_out_val1, rf_out_val2, if_id_reg, id_ex_reg_val1, id_ex_reg_val2, id_ex_reg_mode, id_ex_reg_opcode, id_ex_reg_wb_enc, id_ex_regwrite, ex_instruct);
   parameter [2:0] NOP = 3'b000;
