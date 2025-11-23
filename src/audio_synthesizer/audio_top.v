@@ -1,5 +1,5 @@
 
-module DE1_SoC_Audio_Example (
+module audio_top (
 	// Inputs
 	CLOCK_50,
 	KEY,
@@ -124,6 +124,7 @@ audio_synthesizer_slave slave (
   .enable_noise(enable_noise),
   .channel_audio_out(channel_audio_out)
 );
+
 
 
 
