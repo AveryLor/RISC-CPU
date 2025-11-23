@@ -38,8 +38,8 @@ wire [15:0]  immediate_value   = full_instruction[15:0];
 
 // wires for logic
 wire no_op = instruction_type == 2'b00;
-wire is_arithmetic = (instruction_type ==  2'b01) && !(operation == 3'b111 || operation == 3b'101 || operation == 3b'110);
-wire is_move = (instruction_type ==  2'b01) && (operation == 3'b111 || operation == 3b'101 || operation == 3b'110);
+wire is_arithmetic = (instruction_type ==  2'b01) && !(operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
+wire is_move = (instruction_type ==  2'b01) && (operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
 wire is_memory = instruction_type == 2'b10;
 wire is_audio = instruction_type == 2'b11;
 
@@ -121,10 +121,13 @@ always @(posedge clock) begin
 	writeback_register_encoding <= register_select_1;
 	if (is_arithmetic) 
 		register_writeback_enable <= 2'b11;
-	if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
+	else if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
 		register_writeback_enable <= 2'b01;
-	if (is_move && (operation == 3'b110) /*move upper*/ || is_memory && (operation == 3'b010) /*load upper*/)
+	else if (is_move && (operation == 3'b110) /*move upper*/ || is_memory && (operation == 3'b010) /*load upper*/)
 		register_writeback_enable <= 2'b10;
+	else
+		register_writeback_enable <= 2'b00;
+		
 end
 	
 always @(posedge clock) audio_channel_select <= channel_select;
