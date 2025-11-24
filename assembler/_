@@ -1,32 +1,59 @@
-DEPTH = 65536;
-WIDTH = 32;
-ADDRESS_RADIX = HEX;
-DATA_RADIX = HEX;
+// instr_tick.v
+// Generate a single-cycle instruction tick from a 50 MHz clock.
+// Parameter CYCLES_PER_TICK sets how many CLOCK_50 cycles = one instruction tick.
+//
+// Example:
+//  - For tick_s = 0.05 s (50 ms): CYCLES_PER_TICK = 50_000_000 * 0.05 = 2_500_000
+//  - For tick_s = 0.01 s (10 ms): CYCLES_PER_TICK = 500_000
+//
+// Usage:
+//  instr_tick #(.CYCLES_PER_TICK(2500000)) tick_gen (
+//      .CLOCK_50(clk),
+//      .reset_n(reset_n),
+//      .enable(1'b1),
+//      .instr_tick(instr_tick)
+//  );
 
-CONTENT BEGIN
-    0000 : F000000F;                     -- AM1 15
-    0001 : 7C000000;                     -- DE1
-    0002 : EC000129;                     -- PD1 297
-    0003 : 68000000;                     -- EN1
-    0004 : 64000000;                     -- DI1
-    0005 : EC000129;                     -- PD1 297
-    0006 : 68000000;                     -- EN1
-    0007 : 64000000;                     -- DI1
-    0008 : EC000129;                     -- PD1 297
-    0009 : 68000000;                     -- EN1
-    000A : 64000000;                     -- DI1
-    000B : EC000176;                     -- PD1 374
-    000C : 68000000;                     -- EN1
-    000D : 00000000;                     -- NOP
-    000E : 00000000;                     -- NOP
-    000F : 64000000;                     -- DI1
-    0010 : EC000129;                     -- PD1 297
-    0011 : 68000000;                     -- EN1
-    0012 : 64000000;                     -- DI1
-    0013 : EC0000F9;                     -- PD1 249
-    0014 : 68000000;                     -- EN1
-    0015 : 00000000;                     -- NOP
-    0016 : 00000000;                     -- NOP
-    0017 : 64000000;                     -- DI1
-    [0018 .. FFFF] : 00000000;
-END;
+module instr_tick #(
+    parameter integer CYCLES_PER_TICK = 2500000  // default: 50 ms @ 50 MHz
+) (
+    input  wire CLOCK_50,    // 50 MHz clock input
+    input  wire reset_n,     // active-low synchronous reset
+    input  wire enable,      // when low, ticking is paused (counter holds)
+    output reg  instr_tick,  // single-cycle pulse when tick occurs
+    output reg  [31:0] tick_count // optional: current counter value for debug
+);
+
+    // width large enough for default parameter; increase if you choose enormous CYCLES_PER_TICK
+    localparam integer CNT_WIDTH = $clog2(CYCLES_PER_TICK > 1 ? CYCLES_PER_TICK : 2);
+
+    // counter register sized to CNT_WIDTH (but expose tick_count as 32-bit for ease)
+    reg [CNT_WIDTH-1:0] counter;
+
+    // synchronous process
+    always @(posedge CLOCK_50) begin
+        if (!reset_n) begin
+            counter    <= {CNT_WIDTH{1'b0}};
+            instr_tick <= 1'b0;
+            tick_count <= 32'd0;
+        end else begin
+            instr_tick <= 1'b0; // default: deassert; assert for one cycle when threshold reached
+            if (enable) begin
+                if (counter == CYCLES_PER_TICK - 1) begin
+                    counter    <= {CNT_WIDTH{1'b0}};
+                    instr_tick <= 1'b1;              // one-cycle pulse
+                    tick_count <= 32'd0;
+                end else begin
+                    counter    <= counter + 1'b1;
+                    tick_count <= tick_count + 1;
+                end
+            end else begin
+                // paused: hold counter and outputs low
+                counter    <= counter;
+                instr_tick <= 1'b0;
+                tick_count <= tick_count;
+            end
+        end
+    end
+
+endmodule
