@@ -152,9 +152,9 @@ module instr_decode(
 
 	always @(posedge clk, negedge resetn) writeback_data_select_hotcode <=
 		{
-		is_arithmetic, 
-		is_memory, 
-		is_move, 
+			is_arithmetic, 
+			is_memory, 
+			is_move, 
 		};
 		
 	always @(posedge clk) audio_channel_select <= channel_select;
