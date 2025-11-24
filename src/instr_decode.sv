@@ -24,7 +24,7 @@ module instr_decode(
 	// writeback info
 	output reg [1:0] register_writeback_enable,
 	output reg [2:0] writeback_register_encoding,
-	output reg [3:0] writeback_data_select_hotcode,
+	output reg [2:0] writeback_data_select_hotcode,
 	
 	// audio info
 	output reg [1:0] audio_channel_select,
@@ -144,7 +144,6 @@ always @(posedge clock, posedge reset) writeback_data_select_hotcode <=
 	is_arithmetic, 
 	is_memory, 
 	is_move, 
-	no_op || is_audio
 	};
 	
 always @(posedge clock) audio_channel_select <= channel_select;
