@@ -83,7 +83,7 @@ module memory_io_unit (
 	input [4:0] memory_access_code, // from the op-code: specifies load/store & data size
 	input [31:0] memory_address,	// up to 2^18
 	input clock,			// clock is only used for storing
-	input prev_r,			// used for loading
+	input [1:0] prev_r,			// used for loading
 	/* Output is sent DIRECTLY to writeback module, as a wire */
 	output [31:0] writeback_register_data,	// only used when loading: memory address => register
 	output [1:0] r
