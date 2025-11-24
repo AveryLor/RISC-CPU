@@ -1,59 +1,265 @@
-// instr_tick.v
-// Generate a single-cycle instruction tick from a 50 MHz clock.
-// Parameter CYCLES_PER_TICK sets how many CLOCK_50 cycles = one instruction tick.
-//
-// Example:
-//  - For tick_s = 0.05 s (50 ms): CYCLES_PER_TICK = 50_000_000 * 0.05 = 2_500_000
-//  - For tick_s = 0.01 s (10 ms): CYCLES_PER_TICK = 500_000
-//
-// Usage:
-//  instr_tick #(.CYCLES_PER_TICK(2500000)) tick_gen (
-//      .CLOCK_50(clk),
-//      .reset_n(reset_n),
-//      .enable(1'b1),
-//      .instr_tick(instr_tick)
-//  );
+DEPTH = 65536;
+WIDTH = 32;
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
 
-module instr_tick #(
-    parameter integer CYCLES_PER_TICK = 2500000  // default: 50 ms @ 50 MHz
-) (
-    input  wire CLOCK_50,    // 50 MHz clock input
-    input  wire reset_n,     // active-low synchronous reset
-    input  wire enable,      // when low, ticking is paused (counter holds)
-    output reg  instr_tick,  // single-cycle pulse when tick occurs
-    output reg  [31:0] tick_count // optional: current counter value for debug
-);
-
-    // width large enough for default parameter; increase if you choose enormous CYCLES_PER_TICK
-    localparam integer CNT_WIDTH = $clog2(CYCLES_PER_TICK > 1 ? CYCLES_PER_TICK : 2);
-
-    // counter register sized to CNT_WIDTH (but expose tick_count as 32-bit for ease)
-    reg [CNT_WIDTH-1:0] counter;
-
-    // synchronous process
-    always @(posedge CLOCK_50) begin
-        if (!reset_n) begin
-            counter    <= {CNT_WIDTH{1'b0}};
-            instr_tick <= 1'b0;
-            tick_count <= 32'd0;
-        end else begin
-            instr_tick <= 1'b0; // default: deassert; assert for one cycle when threshold reached
-            if (enable) begin
-                if (counter == CYCLES_PER_TICK - 1) begin
-                    counter    <= {CNT_WIDTH{1'b0}};
-                    instr_tick <= 1'b1;              // one-cycle pulse
-                    tick_count <= 32'd0;
-                end else begin
-                    counter    <= counter + 1'b1;
-                    tick_count <= tick_count + 1;
-                end
-            end else begin
-                // paused: hold counter and outputs low
-                counter    <= counter;
-                instr_tick <= 1'b0;
-                tick_count <= tick_count;
-            end
-        end
-    end
-
-endmodule
+CONTENT BEGIN
+    0000 : F0001FFF;                     -- AM1 0x1FFF
+    0001 : F0801FFF;                     -- AM2 0x1FFF
+    0002 : F2003FFF;                     -- AM3 0x3FFF
+    0003 : 7C000000;                     -- DE1
+    0004 : 78800000;                     -- DQ2
+    0005 : 68000000;                     -- EN1
+    0006 : 68800000;                     -- EN2
+    0007 : 6A000000;                     -- EN3
+    0008 : EC000128;                     -- PD1 296
+    0009 : EC8000F9;                     -- PD2 249
+    000A : EE0004A2;                     -- PD3 1186
+    000B : 00000000;                     -- NOP
+    000C : 00000000;                     -- NOP
+    000D : 00000000;                     -- NOP
+    000E : 00000000;                     -- NOP
+    000F : 00000000;                     -- NOP
+    0010 : EC000128;                     -- PD1 296
+    0011 : EC8000F9;                     -- PD2 249
+    0012 : EE0004A2;                     -- PD3 1186
+    0013 : 00000000;                     -- NOP
+    0014 : 00000000;                     -- NOP
+    0015 : 00000000;                     -- NOP
+    0016 : 00000000;                     -- NOP
+    0017 : 00000000;                     -- NOP
+    0018 : F0000000;                     -- AM1 0
+    0019 : F0800000;                     -- AM2 0
+    001A : F2000000;                     -- AM3 0
+    001B : 00000000;                     -- NOP
+    001C : 00000000;                     -- NOP
+    001D : 00000000;                     -- NOP
+    001E : 00000000;                     -- NOP
+    001F : 00000000;                     -- NOP
+    0020 : F0001FFF;                     -- AM1 0x1FFF
+    0021 : F0801FFF;                     -- AM2 0x1FFF
+    0022 : F2003FFF;                     -- AM3 0x3FFF
+    0023 : EC000128;                     -- PD1 296
+    0024 : EC8000F9;                     -- PD2 249
+    0025 : EE0004A2;                     -- PD3 1186
+    0026 : 00000000;                     -- NOP
+    0027 : 00000000;                     -- NOP
+    0028 : 00000000;                     -- NOP
+    0029 : 00000000;                     -- NOP
+    002A : 00000000;                     -- NOP
+    002B : EC000175;                     -- PD1 373
+    002C : EC800128;                     -- PD2 296
+    002D : EE0005D4;                     -- PD3 1492
+    002E : 00000000;                     -- NOP
+    002F : 00000000;                     -- NOP
+    0030 : 00000000;                     -- NOP
+    0031 : 00000000;                     -- NOP
+    0032 : 00000000;                     -- NOP
+    0033 : 00000000;                     -- NOP
+    0034 : 00000000;                     -- NOP
+    0035 : 00000000;                     -- NOP
+    0036 : 00000000;                     -- NOP
+    0037 : 00000000;                     -- NOP
+    0038 : EC000128;                     -- PD1 296
+    0039 : EC8000F9;                     -- PD2 249
+    003A : EE0004A2;                     -- PD3 1186
+    003B : 00000000;                     -- NOP
+    003C : 00000000;                     -- NOP
+    003D : 00000000;                     -- NOP
+    003E : 00000000;                     -- NOP
+    003F : 00000000;                     -- NOP
+    0040 : 00000000;                     -- NOP
+    0041 : 00000000;                     -- NOP
+    0042 : 00000000;                     -- NOP
+    0043 : 00000000;                     -- NOP
+    0044 : 00000000;                     -- NOP
+    0045 : EC0000F9;                     -- PD1 249
+    0046 : EC8000DE;                     -- PD2 222
+    0047 : EE0003E4;                     -- PD3 996
+    0048 : 00000000;                     -- NOP
+    0049 : 00000000;                     -- NOP
+    004A : 00000000;                     -- NOP
+    004B : 00000000;                     -- NOP
+    004C : 00000000;                     -- NOP
+    004D : 00000000;                     -- NOP
+    004E : 00000000;                     -- NOP
+    004F : 00000000;                     -- NOP
+    0050 : 00000000;                     -- NOP
+    0051 : 00000000;                     -- NOP
+    0052 : 00000000;                     -- NOP
+    0053 : 00000000;                     -- NOP
+    0054 : 00000000;                     -- NOP
+    0055 : 00000000;                     -- NOP
+    0056 : 00000000;                     -- NOP
+    0057 : 00000000;                     -- NOP
+    0058 : 00000000;                     -- NOP
+    0059 : 00000000;                     -- NOP
+    005A : 00000000;                     -- NOP
+    005B : 00000000;                     -- NOP
+    005C : EC000128;                     -- PD1 296
+    005D : EC8000F9;                     -- PD2 249
+    005E : EE0004A2;                     -- PD3 1186
+    005F : 00000000;                     -- NOP
+    0060 : 00000000;                     -- NOP
+    0061 : 00000000;                     -- NOP
+    0062 : 00000000;                     -- NOP
+    0063 : 00000000;                     -- NOP
+    0064 : 00000000;                     -- NOP
+    0065 : 00000000;                     -- NOP
+    0066 : 00000000;                     -- NOP
+    0067 : 00000000;                     -- NOP
+    0068 : 00000000;                     -- NOP
+    0069 : F0000000;                     -- AM1 0
+    006A : F0800000;                     -- AM2 0
+    006B : F2000000;                     -- AM3 0
+    006C : 00000000;                     -- NOP
+    006D : 00000000;                     -- NOP
+    006E : 00000000;                     -- NOP
+    006F : 00000000;                     -- NOP
+    0070 : 00000000;                     -- NOP
+    0071 : 00000000;                     -- NOP
+    0072 : 00000000;                     -- NOP
+    0073 : 00000000;                     -- NOP
+    0074 : 00000000;                     -- NOP
+    0075 : 00000000;                     -- NOP
+    0076 : F0001FFF;                     -- AM1 0x1FFF
+    0077 : F0801FFF;                     -- AM2 0x1FFF
+    0078 : F2003FFF;                     -- AM3 0x3FFF
+    0079 : EC0000F9;                     -- PD1 249
+    007A : EC800175;                     -- PD2 373
+    007B : EE0003E4;                     -- PD3 996
+    007C : 00000000;                     -- NOP
+    007D : 00000000;                     -- NOP
+    007E : 00000000;                     -- NOP
+    007F : 00000000;                     -- NOP
+    0080 : 00000000;                     -- NOP
+    0081 : 00000000;                     -- NOP
+    0082 : 00000000;                     -- NOP
+    0083 : 00000000;                     -- NOP
+    0084 : 00000000;                     -- NOP
+    0085 : 00000000;                     -- NOP
+    0086 : EC0001F2;                     -- PD1 498
+    0087 : EC80018B;                     -- PD2 395
+    0088 : EE0007C8;                     -- PD3 1992
+    0089 : 00000000;                     -- NOP
+    008A : 00000000;                     -- NOP
+    008B : 00000000;                     -- NOP
+    008C : 00000000;                     -- NOP
+    008D : 00000000;                     -- NOP
+    008E : 00000000;                     -- NOP
+    008F : 00000000;                     -- NOP
+    0090 : 00000000;                     -- NOP
+    0091 : 00000000;                     -- NOP
+    0092 : 00000000;                     -- NOP
+    0093 : EC000251;                     -- PD1 593
+    0094 : EC8002EB;                     -- PD2 747
+    0095 : EE0004A2;                     -- PD3 1186
+    0096 : 00000000;                     -- NOP
+    0097 : 00000000;                     -- NOP
+    0098 : 00000000;                     -- NOP
+    0099 : 00000000;                     -- NOP
+    009A : 00000000;                     -- NOP
+    009B : EC0001BC;                     -- PD1 444
+    009C : EC800175;                     -- PD2 373
+    009D : EE000378;                     -- PD3 888
+    009E : 00000000;                     -- NOP
+    009F : 00000000;                     -- NOP
+    00A0 : 00000000;                     -- NOP
+    00A1 : 00000000;                     -- NOP
+    00A2 : 00000000;                     -- NOP
+    00A3 : EC00018B;                     -- PD1 395
+    00A4 : EC8001A3;                     -- PD2 419
+    00A5 : EE0004A2;                     -- PD3 1186
+    00A6 : 00000000;                     -- NOP
+    00A7 : 00000000;                     -- NOP
+    00A8 : 00000000;                     -- NOP
+    00A9 : 00000000;                     -- NOP
+    00AA : 00000000;                     -- NOP
+    00AB : 00000000;                     -- NOP
+    00AC : 00000000;                     -- NOP
+    00AD : 00000000;                     -- NOP
+    00AE : 00000000;                     -- NOP
+    00AF : 00000000;                     -- NOP
+    00B0 : EC0001A3;                     -- PD1 419
+    00B1 : EC800175;                     -- PD2 373
+    00B2 : EE0003E4;                     -- PD3 996
+    00B3 : 00000000;                     -- NOP
+    00B4 : 00000000;                     -- NOP
+    00B5 : 00000000;                     -- NOP
+    00B6 : 00000000;                     -- NOP
+    00B7 : 00000000;                     -- NOP
+    00B8 : EC0001BC;                     -- PD1 444
+    00B9 : EC800175;                     -- PD2 373
+    00BA : EE000378;                     -- PD3 888
+    00BB : 00000000;                     -- NOP
+    00BC : 00000000;                     -- NOP
+    00BD : 00000000;                     -- NOP
+    00BE : 00000000;                     -- NOP
+    00BF : 00000000;                     -- NOP
+    00C0 : EC0001F2;                     -- PD1 498
+    00C1 : EC800251;                     -- PD2 593
+    00C2 : EE0007C8;                     -- PD3 1992
+    00C3 : 00000000;                     -- NOP
+    00C4 : 00000000;                     -- NOP
+    00C5 : 00000000;                     -- NOP
+    00C6 : 00000000;                     -- NOP
+    00C7 : 00000000;                     -- NOP
+    00C8 : 00000000;                     -- NOP
+    00C9 : 00000000;                     -- NOP
+    00CA : 00000000;                     -- NOP
+    00CB : 00000000;                     -- NOP
+    00CC : 00000000;                     -- NOP
+    00CD : EC000128;                     -- PD1 296
+    00CE : EC8000F9;                     -- PD2 249
+    00CF : EE0004A2;                     -- PD3 1186
+    00D0 : 00000000;                     -- NOP
+    00D1 : 00000000;                     -- NOP
+    00D2 : 00000000;                     -- NOP
+    00D3 : 00000000;                     -- NOP
+    00D4 : 00000000;                     -- NOP
+    00D5 : 00000000;                     -- NOP
+    00D6 : 00000000;                     -- NOP
+    00D7 : 00000000;                     -- NOP
+    00D8 : 00000000;                     -- NOP
+    00D9 : 00000000;                     -- NOP
+    00DA : EC0000F9;                     -- PD1 249
+    00DB : EC8000DE;                     -- PD2 222
+    00DC : EE0003E4;                     -- PD3 996
+    00DD : 00000000;                     -- NOP
+    00DE : 00000000;                     -- NOP
+    00DF : 00000000;                     -- NOP
+    00E0 : 00000000;                     -- NOP
+    00E1 : 00000000;                     -- NOP
+    00E2 : 00000000;                     -- NOP
+    00E3 : 00000000;                     -- NOP
+    00E4 : 00000000;                     -- NOP
+    00E5 : 00000000;                     -- NOP
+    00E6 : 00000000;                     -- NOP
+    00E7 : EC0000DE;                     -- PD1 222
+    00E8 : EC8000F9;                     -- PD2 249
+    00E9 : EE0001BC;                     -- PD3 444
+    00EA : 00000000;                     -- NOP
+    00EB : 00000000;                     -- NOP
+    00EC : 00000000;                     -- NOP
+    00ED : 00000000;                     -- NOP
+    00EE : 00000000;                     -- NOP
+    00EF : 00000000;                     -- NOP
+    00F0 : 00000000;                     -- NOP
+    00F1 : 00000000;                     -- NOP
+    00F2 : 00000000;                     -- NOP
+    00F3 : 00000000;                     -- NOP
+    00F4 : 00000000;                     -- NOP
+    00F5 : 00000000;                     -- NOP
+    00F6 : 00000000;                     -- NOP
+    00F7 : 00000000;                     -- NOP
+    00F8 : 00000000;                     -- NOP
+    00F9 : 00000000;                     -- NOP
+    00FA : 00000000;                     -- NOP
+    00FB : 00000000;                     -- NOP
+    00FC : 00000000;                     -- NOP
+    00FD : 00000000;                     -- NOP
+    00FE : 64000000;                     -- DI1
+    00FF : 65000000;                     -- DI2
+    0100 : 66000000;                     -- DI3
+    [0101 .. FFFF] : 00000000;
+END;
