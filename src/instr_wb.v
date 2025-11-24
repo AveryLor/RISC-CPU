@@ -16,7 +16,7 @@ module instr_wb(
 	output reg [2:0] reg_file_register_encoding,
 	output reg [31:0] reg_file_writeback_data,
 	
-	output reg[31:0] completed instruction		// For VGA
+	output reg [31:0] completed_instruction		// For VGA
 );
 
 parameter [2:0] is_arithmetic = 3'b100,
