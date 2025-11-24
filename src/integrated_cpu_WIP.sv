@@ -616,21 +616,32 @@ module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_re
   input resetn;
   
   // From ID/EX pipeline
-  // From ID/EX pipeline
-  input        id_ex_regwrite;
-  input [1:0]  id_ex_reg_wb_enc;
-  input [2:0]  id_ex_reg_opcode;
-  input [31:0] id_ex_reg_val1;
-  input [31:0] id_ex_reg_val2;
   
-  input [7:0] ex_instruct;
-
-  // EX/MEM pipeline registers
-  output reg [1:0] ex_mem_reg_wb_enc;
-  output reg ex_mem_regwrite;
-  output reg [31:0] ex_mem_reg_arithmetic_result;
-
+  input [31:0] ex_instruct; 
+  input [1:0] id_ex_regwrite;
+  input [2:0] id_ex_reg_alu_opcode;
+  input [31:0] id_ex_reg_operand_val1;
+  input [31:0] id_ex_reg_operand_val2;
+  input [1:0] id_ex_reg_wb_enc; 
+  input [4:0] id_ex_reg_memory_access_code;
+  input [2:0] id_ex_reg_wb_data_select_hotcode;
+  input [2:0] id_ex_reg_audio_opcode;
+  input [1:0] id_ex_reg_audio_channel_select;
+  
+  // EX/MEM Registers
   output reg [7:0] mem_instruct;
+  output reg [1:0] ex_mem_regwrite;
+  output reg [31:0] ex_mem_reg_arithmetic_result;
+  output reg [2:0] ex_mem_reg_wb_enc;
+  output reg [31:0] ex_mem_reg_operand_val1;
+  output reg [31:0] ex_mem_reg_operand_val2;
+  output reg [2:0] ex_mem_reg_data_select_hotcode;
+  output reg [4:0] ex_mem_reg_memory_access_code;
+  
+  
+  // To audio unit (combinational - wires)
+  assign audio_opcode = id_ex_reg_audio_opcode;
+  assign audio_channel_select = id_ex_reg_audio_channel_select;
   
   // To ALU (combinational - wires)  
   output [2:0] alu_opcode;
@@ -647,16 +658,26 @@ module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_re
 
   always @ (posedge clk or negedge resetn) begin
     if (!resetn) begin
-      ex_mem_reg_wb_enc <= 2'b00;
-      ex_mem_regwrite <= 1'b0;
-      ex_mem_reg_arithmetic_result <= 32'd0;
-      mem_instruct <= 8'b0;
+		mem_instruct <= 0;
+		ex_mem_regwrite <= 0;
+		ex_mem_arithmetic_result <= 0;
+		ex_mem_reg_wb_enc <= 0;
+		ex_mem_reg_operand_val1 <= 0;
+		ex_mem_reg_operand_val2 <= 0;
+		ex_mem_reg_data_select_hotcode <= 0;
+		ex_mem_reg_memory_access_code <= 0;
+		
+		
     end
     else begin
-      ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
-      ex_mem_regwrite <= id_ex_regwrite;
-      ex_mem_reg_arithmetic_result <= alu_result;
-      mem_instruct <= ex_instruct;
+		mem_instruct <= ex_instruct;
+		ex_mem_regwrite <= id_ex_regwrite;
+		ex_mem_arithmetic_result <= alu_result;
+		ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
+		ex_mem_reg_operand_val1 <= id_ex_reg_operand_val1;
+		ex_mem_reg_operand_val2 <= id_ex_reg_operand_val2;
+		ex_mem_reg_data_select_hotcode <= id_ex_reg_data_select_hotcode;
+		ex_mem_reg_memory_access_code <= id_ex_reg_memory_access_code;
     end
   end
 endmodule
@@ -742,17 +763,17 @@ module HDU(ID_instruct, EX_instruct, MEM_instruct, WB_instruct, stall, out);
                   ADD = 3'b001,
                   INC = 3'b011;
 
-  input [7:0] ID_instruct;
-  input [7:0] EX_instruct;
-  input [7:0] MEM_instruct;
-  input [7:0] WB_instruct; 
+  input [31:0] ID_instruct;
+  input [31:0] EX_instruct;
+  input [31:0] MEM_instruct;
+  input [31:0] WB_instruct; 
 
   output reg stall; // This is the stall signal!
   output out;
 
   wire [2:0] ID_opcode;
-  wire [1:0] ID_reg1;
-  wire [1:0] ID_reg2;
+  wire [2:0] ID_reg1;
+  wire [2:0] ID_reg2;
   
   wire [2:0] EX_opcode;
   wire [1:0] EX_reg1; 
@@ -764,17 +785,17 @@ module HDU(ID_instruct, EX_instruct, MEM_instruct, WB_instruct, stall, out);
   wire [1:0] WB_reg1;
 
   // have some assigns with the inputs to the wires
-  assign ID_opcode = ID_instruct[6:4];
-  assign EX_opcode = EX_instruct[6:4];
-  assign MEM_opcode = MEM_instruct[6:4];
-  assign WB_opcode = WB_instruct[6:4];
+  assign ID_opcode = ID_instruct[31:26];
+  assign EX_opcode = EX_instruct[31:26];
+  assign MEM_opcode = MEM_instruct[31:26];
+  assign WB_opcode = WB_instruct[31:26];
 
-  assign ID_reg1 = ID_instruct[3:2]; 
-  assign ID_reg2 = ID_instruct[1:0];
+  assign ID_reg1 = ID_instruct[21:19]; 
+  assign ID_reg2 = ID_instruct[18:16];
 
-  assign EX_reg1 = EX_instruct[3:2];
-  assign MEM_reg1 = MEM_instruct[3:2];
-  assign WB_reg1 = WB_instruct[3:2];
+  assign EX_reg1 = EX_instruct[21:19];
+  assign MEM_reg1 = MEM_instruct[21:19];
+  assign WB_reg1 = WB_instruct[21:19];
 
 
   always @ (*) begin
