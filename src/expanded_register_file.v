@@ -8,7 +8,7 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
                   R6_ENC = 3'b110,
                   R7_ENC = 3'b111;
 
-  input [1;0] we; // Indicates if we are doing a write (write enable)
+  input [1:0] we; // Indicates if we are doing a write (write enable)
   input clk;
   input resetn;
 
@@ -44,6 +44,7 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
       R5_ENC: reg_out_0 = R5;
       R6_ENC: reg_out_0 = R6;
       R7_ENC: reg_out_0 = R7;
+      default: reg_out_0 = 0;
     endcase
 
     case (r_enc_1)
@@ -55,21 +56,10 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
       R5_ENC: reg_out_1 = R5;
       R6_ENC: reg_out_1 = R6;
       R7_ENC: reg_out_1 = R7;
+      default: reg_out_1 = 0;
     endcase
   end
   
-  // Writing to registers.
-  always @ (negedge clk or negedge resetn) begin
-    if (!resetn) begin
-      R0 <= 32'd0;
-      R1 <= 32'd0;
-    end
-    else if (we) begin
-      if (r_write_enc == 2'b00) R0 <= wdata;
-      else R1 <= wdata; 
-    end
-  end
-
   always @ (negedge clk or negedge resetn) begin
     if (!resetn) begin
       R0 <= 32'd0;
@@ -81,29 +71,31 @@ module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_o
       R6 <= 32'd0;
       R7 <= 32'd0;
     end
-    if (we[0]) begin
-      case (r_write_enc) 
-        R0_ENC: R0[15:0] <= wdata[15:0]; 
-        R1_ENC: R1[15:0] <= wdata[15:0];
-        R2_ENC: R2[15:0] <= wdata[15:0];
-        R3_ENC: R3[15:0] <= wdata[15:0];
-        R4_ENC: R4[15:0] <= wdata[15:0];
-        R5_ENC: R5[15:0] <= wdata[15:0];
-        R6_ENC: R6[15:0] <= wdata{15:0];
-        R7_ENC: R7[15:0] <= wdata[15:0];
-      endcase
-    end
-    if (we[1]) begin
-      case (r_write_enc) 
-        R0_ENC: R0[31:16] <= wdata[31:16]; 
-        R1_ENC: R1[31:16] <= wdata[31:16];
-        R2_ENC: R2[31:16] <= wdata[31:16];
-        R3_ENC: R3[31:16] <= wdata[31:16];
-        R4_ENC: R4[31:16] <= wdata[31:16];
-        R5_ENC: R5[31:16] <= wdata[31:16];
-        R6_ENC: R6[31:16] <= wdata{31:16];
-        R7_ENC: R7[31:16] <= wdata[31:16];
-      endcase
+    else begin
+      if (we[0]) begin
+        case (r_write_enc) 
+          R0_ENC: R0[15:0] <= wdata[15:0]; 
+          R1_ENC: R1[15:0] <= wdata[15:0];
+          R2_ENC: R2[15:0] <= wdata[15:0];
+          R3_ENC: R3[15:0] <= wdata[15:0];
+          R4_ENC: R4[15:0] <= wdata[15:0];
+          R5_ENC: R5[15:0] <= wdata[15:0];
+          R6_ENC: R6[15:0] <= wdata[15:0];
+          R7_ENC: R7[15:0] <= wdata[15:0];
+        endcase
+      end
+      if (we[1]) begin
+        case (r_write_enc) 
+          R0_ENC: R0[31:16] <= wdata[31:16]; 
+          R1_ENC: R1[31:16] <= wdata[31:16];
+          R2_ENC: R2[31:16] <= wdata[31:16];
+          R3_ENC: R3[31:16] <= wdata[31:16];
+          R4_ENC: R4[31:16] <= wdata[31:16];
+          R5_ENC: R5[31:16] <= wdata[31:16];
+          R6_ENC: R6[31:16] <= wdata[31:16];
+          R7_ENC: R7[31:16] <= wdata[31:16];
+        endcase
+      end
     end
   end
 
