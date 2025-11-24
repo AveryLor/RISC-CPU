@@ -248,7 +248,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_MEMORY_TITLE) ? memory_title_color
 					: pipeline_title_color;
 	
-	wire [31:0] test_input = 32'hAAAAAAAA;
+	wire [31:0] test_input1 = 32'b0010010000000001;
+	wire [31:0] test_input2 = 32'b001011;
 
 	// Instantiate all drawing modules
 	reg_title_drawer rtd (
@@ -273,11 +274,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	pipeline_drawer pd (
 		.clock(CLOCK_50), 
 		.resetn(pipeline_local_resetn), 
-		.IF_PC_VALUE(test_input), 
-		.ID_VAL_A(test_input), 
-		.EX_ALU_RESULT(test_input), 
-		.MEM_DATA_OUT(test_input), 
-		.WB_DATA_IN(test_input), 
+		.IF_PC_VALUE(test_input1), 
+		.ID_VAL_A(test_input1), 
+		.EX_ALU_RESULT(test_input2), 
+		.MEM_DATA_OUT(test_input2), 
+		.WB_DATA_IN(test_input2), 
 		.pipeline_x(pipeline_x), 
 		.pipeline_y(pipeline_y), 
 		.pipeline_color(pipeline_color), 
@@ -355,164 +356,164 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	defparam VGA.BACKGROUND_IMAGE = "./bmp_640_9.mif"; 
 
 endmodule
-
-// Instruction Log Drawer - Displays WB stage instructions as a scrolling log
-// Shows last 10 instructions with the latest in red, older ones in white
-// When log is full, new instructions overwrite oldest ones
-module instruction_log_drawer(clock, resetn, WB_instruction, WB_valid, log_x, log_y, log_color, log_done);
-	// Inputs
-	input clock;
-	input resetn;
-	input [31:0] WB_instruction;  // 32-bit instruction from WB stage
-	input WB_valid;                // Pulsed high when new instruction enters WB
-	
-	// Outputs
-	output wire [9:0] log_x;
-	output wire [8:0] log_y;
-	output wire [8:0] log_color;
-	output wire log_done;
-	
-	// ===== CIRCULAR BUFFER FOR INSTRUCTION LOG =====
-	reg [31:0] instruction_buffer [9:0];  // Stores last 10 instructions (0 = oldest, 9 = newest)
-	reg [3:0] buffer_head;                // Points to next write location (0-9)
-	reg [3:0] current_instr_idx;          // Index of current instruction being drawn
-	
-	integer i;
-	
-	// Initialize buffer
-	initial begin
-		for (i = 0; i < 10; i = i + 1) begin
-			instruction_buffer[i] = 32'h00000000;
-		end
-		buffer_head = 4'd0;
-	end
-	
-	// ===== UPDATE BUFFER WHEN NEW INSTRUCTION ARRIVES =====
-	always @(posedge clock or negedge resetn) begin
-		if (!resetn) begin
-			buffer_head <= 4'd0;
-			for (i = 0; i < 10; i = i + 1) begin
-				instruction_buffer[i] <= 32'h00000000;
-			end
-		end else if (WB_valid) begin
-			// Store new instruction at head position
-			instruction_buffer[buffer_head] <= WB_instruction;
-			
-			// Increment head (circular)
-			if (buffer_head == 4'd9) begin
-				buffer_head <= 4'd0;
-			end else begin
-				buffer_head <= buffer_head + 1'b1;
-			end
-		end
-	end
-	
-	// ===== CHARACTER DRAWING LOGIC =====
-	// Each instruction displays as: "[RED ARROW] XXXXXXXX" (16 chars per row)
-	// 10 instructions total = 160 characters
-	
-	parameter chars_per_instruction = 16;  // "►" (1 char) + space (1) + 8 hex (8) + 6 spaces = 16 total
-	parameter num_instructions = 10;
-	parameter max_chars = chars_per_instruction * num_instructions;  // 160
-	
-	wire char_drawer_done;
-	reg [7:0] char_idx;  // 0->159
-	reg [2:0] pixel_x;   // 0->7
-	reg [2:0] pixel_y;   // 0->7
-	
-	char_drawer_logic cdl_inst (
-		.clock(clock),
-		.resetn(resetn),
-		.char_count(max_chars),
-		.done(char_drawer_done),
-		.char_idx(char_idx),
-		.pixel_x(pixel_x),
-		.pixel_y(pixel_y)
-	);
-	
-	// Determine which instruction row and character position
-	wire [3:0] instr_row = char_idx / chars_per_instruction;      // 0-9 (which instruction row)
-	wire [4:0] char_in_instr = char_idx % chars_per_instruction;  // 0-15 (position within row)
-	
-	// Get the instruction to display (accounting for circular buffer)
-	// Row 0 = oldest, Row 9 = newest
-	wire [3:0] buffer_idx = (buffer_head + instr_row) % 10;  // Map row to buffer position
-	wire [31:0] display_instruction = instruction_buffer[buffer_idx];
-	
-	// Determine if this is the newest instruction (red) or older (white)
-	wire is_newest = (instr_row == 9);
-	
-	// Build character code for current position
-	wire [7:0] char_code;
-	
-	always @(*) begin
-		case (char_in_instr)
-			// Position 0: Arrow (►) for newest, space for others
-//			0: char_code = is_newest ? 8'd39 : 8'd37;  // 39 = ►, 37 = space
-			0: char_code = 8'd39;  
-			// Position 1: Space
-			1: char_code = 8'd37;
-			
-			// Positions 2-9: 8 hex digits of instruction
-			2: char_code = hex_to_char(display_instruction[31:28]);
-			3: char_code = hex_to_char(display_instruction[27:24]);
-			4: char_code = hex_to_char(display_instruction[23:20]);
-			5: char_code = hex_to_char(display_instruction[19:16]);
-			6: char_code = hex_to_char(display_instruction[15:12]);
-			7: char_code = hex_to_char(display_instruction[11:8]);
-			8: char_code = hex_to_char(display_instruction[7:4]);
-			9: char_code = hex_to_char(display_instruction[3:0]);
-			
-			// Positions 10-15: Padding spaces
-			10, 11, 12, 13, 14, 15: char_code = 8'd37;
-			
-			default: char_code = 8'd37;
-		endcase
-	end
-	
-	// Function to convert 4-bit hex to character code
-	function [7:0] hex_to_char(input [3:0] hex_digit);
-		begin
-			if (hex_digit < 10) begin
-				hex_to_char = 8'd0 + hex_digit;        // 0-9
-			end else begin
-				hex_to_char = 8'd10 + (hex_digit - 10); // A-F
-			end
-		end
-	endfunction
-	
-	// Get character bitmap
-	wire [63:0] pixelLine;
-	character bmp_inst (
-		.digit(char_code),
-		.pixelLine(pixelLine)
-	);
-	
-	// Position on screen
-	// Start at X=350, Y=20, each instruction row 15 pixels apart
-	assign log_x = 350 + (char_in_instr * 9) + pixel_x;
-	assign log_y = 25 + (instr_row * 15) + pixel_y;
-	
-	// Color: Red for newest (is_newest), white for others
-	wire [7:0] pixels [7:0];
-	assign pixels[0] = pixelLine[7:0];
-	assign pixels[1] = pixelLine[15:8];
-	assign pixels[2] = pixelLine[23:16];
-	assign pixels[3] = pixelLine[31:24];
-	assign pixels[4] = pixelLine[39:32];
-	assign pixels[5] = pixelLine[47:40];
-	assign pixels[6] = pixelLine[55:48];
-	assign pixels[7] = pixelLine[63:56];
-	
-	wire pixel_on = pixels[pixel_y][7-pixel_x];
-	
-	// Color assignment: Red for newest, white for older
-	assign log_color = pixel_on ? (is_newest ? 9'b110000000 : 9'b111111111) : 9'b000000000;
-	
-	// Done signal
-	assign log_done = char_drawer_done;
-
-endmodule
+//
+//// Instruction Log Drawer - Displays WB stage instructions as a scrolling log
+//// Shows last 10 instructions with the latest in red, older ones in white
+//// When log is full, new instructions overwrite oldest ones
+//module instruction_log_drawer(clock, resetn, WB_instruction, WB_valid, log_x, log_y, log_color, log_done);
+//	// Inputs
+//	input clock;
+//	input resetn;
+//	input [31:0] WB_instruction;  // 32-bit instruction from WB stage
+//	input WB_valid;                // Pulsed high when new instruction enters WB
+//	
+//	// Outputs
+//	output wire [9:0] log_x;
+//	output wire [8:0] log_y;
+//	output wire [8:0] log_color;
+//	output wire log_done;
+//	
+//	// ===== CIRCULAR BUFFER FOR INSTRUCTION LOG =====
+//	reg [31:0] instruction_buffer [9:0];  // Stores last 10 instructions (0 = oldest, 9 = newest)
+//	reg [3:0] buffer_head;                // Points to next write location (0-9)
+//	reg [3:0] current_instr_idx;          // Index of current instruction being drawn
+//	
+//	integer i;
+//	
+//	// Initialize buffer
+//	initial begin
+//		for (i = 0; i < 10; i = i + 1) begin
+//			instruction_buffer[i] = 32'h00000000;
+//		end
+//		buffer_head = 4'd0;
+//	end
+//	
+//	// ===== UPDATE BUFFER WHEN NEW INSTRUCTION ARRIVES =====
+//	always @(posedge clock or negedge resetn) begin
+//		if (!resetn) begin
+//			buffer_head <= 4'd0;
+//			for (i = 0; i < 10; i = i + 1) begin
+//				instruction_buffer[i] <= 32'h00000000;
+//			end
+//		end else if (WB_valid) begin
+//			// Store new instruction at head position
+//			instruction_buffer[buffer_head] <= WB_instruction;
+//			
+//			// Increment head (circular)
+//			if (buffer_head == 4'd9) begin
+//				buffer_head <= 4'd0;
+//			end else begin
+//				buffer_head <= buffer_head + 1'b1;
+//			end
+//		end
+//	end
+//	
+//	// ===== CHARACTER DRAWING LOGIC =====
+//	// Each instruction displays as: "[RED ARROW] XXXXXXXX" (16 chars per row)
+//	// 10 instructions total = 160 characters
+//	
+//	parameter chars_per_instruction = 16;  // "►" (1 char) + space (1) + 8 hex (8) + 6 spaces = 16 total
+//	parameter num_instructions = 10;
+//	parameter max_chars = chars_per_instruction * num_instructions;  // 160
+//	
+//	wire char_drawer_done;
+//	reg [7:0] char_idx;  // 0->159
+//	reg [2:0] pixel_x;   // 0->7
+//	reg [2:0] pixel_y;   // 0->7
+//	
+//	char_drawer_logic cdl_inst (
+//		.clock(clock),
+//		.resetn(resetn),
+//		.char_count(max_chars),
+//		.done(char_drawer_done),
+//		.char_idx(char_idx),
+//		.pixel_x(pixel_x),
+//		.pixel_y(pixel_y)
+//	);
+//	
+//	// Determine which instruction row and character position
+//	wire [3:0] instr_row = char_idx / chars_per_instruction;      // 0-9 (which instruction row)
+//	wire [4:0] char_in_instr = char_idx % chars_per_instruction;  // 0-15 (position within row)
+//	
+//	// Get the instruction to display (accounting for circular buffer)
+//	// Row 0 = oldest, Row 9 = newest
+//	wire [3:0] buffer_idx = (buffer_head + instr_row) % 10;  // Map row to buffer position
+//	wire [31:0] display_instruction = instruction_buffer[buffer_idx];
+//	
+//	// Determine if this is the newest instruction (red) or older (white)
+//	wire is_newest = (instr_row == 9);
+//	
+//	// Build character code for current position
+//	wire [7:0] char_code;
+//	
+//	always @(*) begin
+//		case (char_in_instr)
+//			// Position 0: Arrow (►) for newest, space for others
+////			0: char_code = is_newest ? 8'd39 : 8'd37;  // 39 = ►, 37 = space
+//			0: char_code = 8'd39;  
+//			// Position 1: Space
+//			1: char_code = 8'd37;
+//			
+//			// Positions 2-9: 8 hex digits of instruction
+//			2: char_code = hex_to_char(display_instruction[31:28]);
+//			3: char_code = hex_to_char(display_instruction[27:24]);
+//			4: char_code = hex_to_char(display_instruction[23:20]);
+//			5: char_code = hex_to_char(display_instruction[19:16]);
+//			6: char_code = hex_to_char(display_instruction[15:12]);
+//			7: char_code = hex_to_char(display_instruction[11:8]);
+//			8: char_code = hex_to_char(display_instruction[7:4]);
+//			9: char_code = hex_to_char(display_instruction[3:0]);
+//			
+//			// Positions 10-15: Padding spaces
+//			10, 11, 12, 13, 14, 15: char_code = 8'd37;
+//			
+//			default: char_code = 8'd37;
+//		endcase
+//	end
+//	
+//	// Function to convert 4-bit hex to character code
+//	function [7:0] hex_to_char(input [3:0] hex_digit);
+//		begin
+//			if (hex_digit < 10) begin
+//				hex_to_char = 8'd0 + hex_digit;        // 0-9
+//			end else begin
+//				hex_to_char = 8'd10 + (hex_digit - 10); // A-F
+//			end
+//		end
+//	endfunction
+//	
+//	// Get character bitmap
+//	wire [63:0] pixelLine;
+//	character bmp_inst (
+//		.digit(char_code),
+//		.pixelLine(pixelLine)
+//	);
+//	
+//	// Position on screen
+//	// Start at X=350, Y=20, each instruction row 15 pixels apart
+//	assign log_x = 350 + (char_in_instr * 9) + pixel_x;
+//	assign log_y = 25 + (instr_row * 15) + pixel_y;
+//	
+//	// Color: Red for newest (is_newest), white for others
+//	wire [7:0] pixels [7:0];
+//	assign pixels[0] = pixelLine[7:0];
+//	assign pixels[1] = pixelLine[15:8];
+//	assign pixels[2] = pixelLine[23:16];
+//	assign pixels[3] = pixelLine[31:24];
+//	assign pixels[4] = pixelLine[39:32];
+//	assign pixels[5] = pixelLine[47:40];
+//	assign pixels[6] = pixelLine[55:48];
+//	assign pixels[7] = pixelLine[63:56];
+//	
+//	wire pixel_on = pixels[pixel_y][7-pixel_x];
+//	
+//	// Color assignment: Red for newest, white for older
+//	assign log_color = pixel_on ? (is_newest ? 9'b110000000 : 9'b111111111) : 9'b000000000;
+//	
+//	// Done signal
+//	assign log_done = char_drawer_done;
+//
+//endmodule
 
 // Draws out the title above the register
 module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
@@ -1282,7 +1283,7 @@ module pipeline_drawer(
         endcase
     end
 
-    // --- 4. Character Selection ---
+    // Character Selection 
     reg [7:0] char_to_draw;
     
     always @(*) begin
@@ -1348,11 +1349,11 @@ module pipeline_drawer(
             r2 = inst[22:20]; 
             imd = inst[15:0]; 
             
-            r1_c = hex2char({1'b0, r1}); 
-            r2_c = hex2char({1'b0, r2});
+            r1_c = {1'b0, r1}; 
+            r2_c = {1'b0, r2};
             
-            h1 = hex2char(imd[15:12]); h2 = hex2char(imd[11:8]);
-            h3 = hex2char(imd[7:4]);   h4 = hex2char(imd[3:0]);
+            h1 = imd[15:12]; h2 = imd[11:8];
+            h3 = imd[7:4];   h4 = imd[3:0];
 
             case (opcode)
                 // --- REG-REG (Bit 31=0, Bit 30=0) ---
@@ -1398,7 +1399,7 @@ module pipeline_drawer(
                 6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN
                 
                 // Default
-                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, inst[31:28], inst[27:24], {10{C_SP}}};
             endcase
         end
     endfunction
