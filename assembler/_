@@ -1,285 +1,78 @@
-DEPTH = 65536;
-WIDTH = 32;
-ADDRESS_RADIX = HEX;
-DATA_RADIX = HEX;
+module noise_generator(
+    input  [31:0] amplitude,      // user amplitude (we use lower 14 bits)
+    input  [31:0] period_cycles,
+    input         CLOCK_50,
+    input         reset,
+    output reg [31:0] channel_audio_out
+);
+    reg [31:0] count_cycles;
 
-CONTENT BEGIN
-    0000 : F3001000;                     -- AM4 0x1000
-    0001 : 00000000;                     -- NOP
-    0002 : 00000000;                     -- NOP
-    0003 : 00000000;                     -- NOP
-    0004 : 00000000;                     -- NOP
-    0005 : EF00000A;                     -- PD4 10
-    0006 : F3001000;                     -- AM4 0x1000
-    0007 : 6B000000;                     -- EN4
-    0008 : 00000000;                     -- NOP
-    0009 : 00000000;                     -- NOP
-    000A : 00000000;                     -- NOP
-    000B : 00000000;                     -- NOP
-    000C : 00000000;                     -- NOP
-    000D : 67000000;                     -- DI4
-    000E : 00000000;                     -- NOP
-    000F : 00000000;                     -- NOP
-    0010 : EF000014;                     -- PD4 20
-    0011 : F3001000;                     -- AM4 0x1000
-    0012 : 6B000000;                     -- EN4
-    0013 : 00000000;                     -- NOP
-    0014 : 00000000;                     -- NOP
-    0015 : 00000000;                     -- NOP
-    0016 : 00000000;                     -- NOP
-    0017 : 00000000;                     -- NOP
-    0018 : 67000000;                     -- DI4
-    0019 : 00000000;                     -- NOP
-    001A : 00000000;                     -- NOP
-    001B : EF000028;                     -- PD4 40
-    001C : F3001400;                     -- AM4 0x1400
-    001D : 6B000000;                     -- EN4
-    001E : 00000000;                     -- NOP
-    001F : 00000000;                     -- NOP
-    0020 : 00000000;                     -- NOP
-    0021 : 00000000;                     -- NOP
-    0022 : 00000000;                     -- NOP
-    0023 : 00000000;                     -- NOP
-    0024 : 67000000;                     -- DI4
-    0025 : 00000000;                     -- NOP
-    0026 : 00000000;                     -- NOP
-    0027 : 00000000;                     -- NOP
-    0028 : EF000050;                     -- PD4 80
-    0029 : F3001800;                     -- AM4 0x1800
-    002A : 6B000000;                     -- EN4
-    002B : 00000000;                     -- NOP
-    002C : 00000000;                     -- NOP
-    002D : 00000000;                     -- NOP
-    002E : 00000000;                     -- NOP
-    002F : 00000000;                     -- NOP
-    0030 : 00000000;                     -- NOP
-    0031 : 67000000;                     -- DI4
-    0032 : 00000000;                     -- NOP
-    0033 : 00000000;                     -- NOP
-    0034 : 00000000;                     -- NOP
-    0035 : EF0000A0;                     -- PD4 160
-    0036 : F3001800;                     -- AM4 0x1800
-    0037 : 6B000000;                     -- EN4
-    0038 : 00000000;                     -- NOP
-    0039 : 00000000;                     -- NOP
-    003A : 00000000;                     -- NOP
-    003B : 00000000;                     -- NOP
-    003C : 00000000;                     -- NOP
-    003D : 00000000;                     -- NOP
-    003E : 00000000;                     -- NOP
-    003F : 00000000;                     -- NOP
-    0040 : 67000000;                     -- DI4
-    0041 : 00000000;                     -- NOP
-    0042 : 00000000;                     -- NOP
-    0043 : 00000000;                     -- NOP
-    0044 : 00000000;                     -- NOP
-    0045 : EF000140;                     -- PD4 320
-    0046 : F3002000;                     -- AM4 0x2000
-    0047 : 6B000000;                     -- EN4
-    0048 : 00000000;                     -- NOP
-    0049 : 00000000;                     -- NOP
-    004A : 00000000;                     -- NOP
-    004B : 00000000;                     -- NOP
-    004C : 00000000;                     -- NOP
-    004D : 00000000;                     -- NOP
-    004E : 00000000;                     -- NOP
-    004F : 00000000;                     -- NOP
-    0050 : 67000000;                     -- DI4
-    0051 : 00000000;                     -- NOP
-    0052 : 00000000;                     -- NOP
-    0053 : 00000000;                     -- NOP
-    0054 : 00000000;                     -- NOP
-    0055 : EF000280;                     -- PD4 640
-    0056 : F3002000;                     -- AM4 0x2000
-    0057 : 6B000000;                     -- EN4
-    0058 : 00000000;                     -- NOP
-    0059 : 00000000;                     -- NOP
-    005A : 00000000;                     -- NOP
-    005B : 00000000;                     -- NOP
-    005C : 00000000;                     -- NOP
-    005D : 00000000;                     -- NOP
-    005E : 00000000;                     -- NOP
-    005F : 00000000;                     -- NOP
-    0060 : 00000000;                     -- NOP
-    0061 : 00000000;                     -- NOP
-    0062 : 67000000;                     -- DI4
-    0063 : 00000000;                     -- NOP
-    0064 : 00000000;                     -- NOP
-    0065 : 00000000;                     -- NOP
-    0066 : 00000000;                     -- NOP
-    0067 : EF000500;                     -- PD4 1280
-    0068 : F3002800;                     -- AM4 0x2800
-    0069 : 6B000000;                     -- EN4
-    006A : 00000000;                     -- NOP
-    006B : 00000000;                     -- NOP
-    006C : 00000000;                     -- NOP
-    006D : 00000000;                     -- NOP
-    006E : 00000000;                     -- NOP
-    006F : 00000000;                     -- NOP
-    0070 : 00000000;                     -- NOP
-    0071 : 00000000;                     -- NOP
-    0072 : 00000000;                     -- NOP
-    0073 : 00000000;                     -- NOP
-    0074 : 00000000;                     -- NOP
-    0075 : 00000000;                     -- NOP
-    0076 : 67000000;                     -- DI4
-    0077 : 00000000;                     -- NOP
-    0078 : 00000000;                     -- NOP
-    0079 : 00000000;                     -- NOP
-    007A : 00000000;                     -- NOP
-    007B : 00000000;                     -- NOP
-    007C : 00000000;                     -- NOP
-    007D : EF00001E;                     -- PD4 30
-    007E : F3002FFF;                     -- AM4 0x2FFF
-    007F : 6B000000;                     -- EN4
-    0080 : 00000000;                     -- NOP
-    0081 : 00000000;                     -- NOP
-    0082 : 67000000;                     -- DI4
-    0083 : 00000000;                     -- NOP
-    0084 : 6B000000;                     -- EN4
-    0085 : 00000000;                     -- NOP
-    0086 : 00000000;                     -- NOP
-    0087 : 67000000;                     -- DI4
-    0088 : 00000000;                     -- NOP
-    0089 : 6B000000;                     -- EN4
-    008A : 00000000;                     -- NOP
-    008B : 00000000;                     -- NOP
-    008C : 67000000;                     -- DI4
-    008D : 00000000;                     -- NOP
-    008E : 00000000;                     -- NOP
-    008F : 00000000;                     -- NOP
-    0090 : 00000000;                     -- NOP
-    0091 : 00000000;                     -- NOP
-    0092 : F3001FFF;                     -- AM4 0x1FFF
-    0093 : EF000014;                     -- PD4 20
-    0094 : 6B000000;                     -- EN4
-    0095 : 00000000;                     -- NOP
-    0096 : 00000000;                     -- NOP
-    0097 : 00000000;                     -- NOP
-    0098 : EF000028;                     -- PD4 40
-    0099 : 00000000;                     -- NOP
-    009A : 00000000;                     -- NOP
-    009B : 00000000;                     -- NOP
-    009C : EF000050;                     -- PD4 80
-    009D : 00000000;                     -- NOP
-    009E : 00000000;                     -- NOP
-    009F : 00000000;                     -- NOP
-    00A0 : EF0000A0;                     -- PD4 160
-    00A1 : 00000000;                     -- NOP
-    00A2 : 00000000;                     -- NOP
-    00A3 : 00000000;                     -- NOP
-    00A4 : EF000140;                     -- PD4 320
-    00A5 : 00000000;                     -- NOP
-    00A6 : 00000000;                     -- NOP
-    00A7 : 00000000;                     -- NOP
-    00A8 : EF000280;                     -- PD4 640
-    00A9 : 00000000;                     -- NOP
-    00AA : 00000000;                     -- NOP
-    00AB : 00000000;                     -- NOP
-    00AC : 67000000;                     -- DI4
-    00AD : 00000000;                     -- NOP
-    00AE : 00000000;                     -- NOP
-    00AF : 00000000;                     -- NOP
-    00B0 : 00000000;                     -- NOP
-    00B1 : 00000000;                     -- NOP
-    00B2 : 00000000;                     -- NOP
-    00B3 : EF000014;                     -- PD4 20
-    00B4 : F3002AAA;                     -- AM4 0x2AAA
-    00B5 : 6B000000;                     -- EN4
-    00B6 : 00000000;                     -- NOP
-    00B7 : 00000000;                     -- NOP
-    00B8 : EF000050;                     -- PD4 80
-    00B9 : 00000000;                     -- NOP
-    00BA : 00000000;                     -- NOP
-    00BB : EF000014;                     -- PD4 20
-    00BC : 00000000;                     -- NOP
-    00BD : 00000000;                     -- NOP
-    00BE : EF000050;                     -- PD4 80
-    00BF : 00000000;                     -- NOP
-    00C0 : 00000000;                     -- NOP
-    00C1 : 67000000;                     -- DI4
-    00C2 : 00000000;                     -- NOP
-    00C3 : 00000000;                     -- NOP
-    00C4 : 00000000;                     -- NOP
-    00C5 : 00000000;                     -- NOP
-    00C6 : 00000000;                     -- NOP
-    00C7 : 00000000;                     -- NOP
-    00C8 : EF000140;                     -- PD4 320
-    00C9 : F3000800;                     -- AM4 0x0800
-    00CA : 6B000000;                     -- EN4
-    00CB : 00000000;                     -- NOP
-    00CC : 00000000;                     -- NOP
-    00CD : 00000000;                     -- NOP
-    00CE : 00000000;                     -- NOP
-    00CF : 00000000;                     -- NOP
-    00D0 : 00000000;                     -- NOP
-    00D1 : 00000000;                     -- NOP
-    00D2 : 00000000;                     -- NOP
-    00D3 : 00000000;                     -- NOP
-    00D4 : 00000000;                     -- NOP
-    00D5 : 00000000;                     -- NOP
-    00D6 : 00000000;                     -- NOP
-    00D7 : 00000000;                     -- NOP
-    00D8 : 00000000;                     -- NOP
-    00D9 : 00000000;                     -- NOP
-    00DA : 00000000;                     -- NOP
-    00DB : 00000000;                     -- NOP
-    00DC : 00000000;                     -- NOP
-    00DD : 00000000;                     -- NOP
-    00DE : 00000000;                     -- NOP
-    00DF : 00000000;                     -- NOP
-    00E0 : 00000000;                     -- NOP
-    00E1 : 00000000;                     -- NOP
-    00E2 : 00000000;                     -- NOP
-    00E3 : 00000000;                     -- NOP
-    00E4 : 00000000;                     -- NOP
-    00E5 : 00000000;                     -- NOP
-    00E6 : 00000000;                     -- NOP
-    00E7 : 00000000;                     -- NOP
-    00E8 : 00000000;                     -- NOP
-    00E9 : 00000000;                     -- NOP
-    00EA : 00000000;                     -- NOP
-    00EB : 00000000;                     -- NOP
-    00EC : 00000000;                     -- NOP
-    00ED : 00000000;                     -- NOP
-    00EE : 00000000;                     -- NOP
-    00EF : 00000000;                     -- NOP
-    00F0 : 00000000;                     -- NOP
-    00F1 : 00000000;                     -- NOP
-    00F2 : 00000000;                     -- NOP
-    00F3 : 67000000;                     -- DI4
-    00F4 : 00000000;                     -- NOP
-    00F5 : 00000000;                     -- NOP
-    00F6 : 00000000;                     -- NOP
-    00F7 : 00000000;                     -- NOP
-    00F8 : 00000000;                     -- NOP
-    00F9 : 00000000;                     -- NOP
-    00FA : 00000000;                     -- NOP
-    00FB : 00000000;                     -- NOP
-    00FC : EF000028;                     -- PD4 40
-    00FD : F3003000;                     -- AM4 0x3000
-    00FE : 6B000000;                     -- EN4
-    00FF : 00000000;                     -- NOP
-    0100 : 00000000;                     -- NOP
-    0101 : 67000000;                     -- DI4
-    0102 : 00000000;                     -- NOP
-    0103 : 6B000000;                     -- EN4
-    0104 : 00000000;                     -- NOP
-    0105 : 00000000;                     -- NOP
-    0106 : 67000000;                     -- DI4
-    0107 : 00000000;                     -- NOP
-    0108 : 6B000000;                     -- EN4
-    0109 : 00000000;                     -- NOP
-    010A : 00000000;                     -- NOP
-    010B : 67000000;                     -- DI4
-    010C : 00000000;                     -- NOP
-    010D : 00000000;                     -- NOP
-    010E : 00000000;                     -- NOP
-    010F : 00000000;                     -- NOP
-    0110 : 00000000;                     -- NOP
-    0111 : 00000000;                     -- NOP
-    0112 : 00000000;                     -- NOP
-    0113 : 00000000;                     -- NOP
-    0114 : 00000000;                     -- NOP
-    [0115 .. FFFF] : 00000000;
-END;
+    // keep an internal LFSR state (32-bit)
+    reg [31:0] lfsr_state;
+    wire [31:0] lfsr_next;
+
+    // --- existing cycle counter (unchanged) ---
+    always@(posedge CLOCK_50) begin
+        if (reset | period_cycles == 0)
+            count_cycles <= 0;
+        else begin
+            if (count_cycles < period_cycles - 1) count_cycles <= count_cycles + 1;
+            else count_cycles <= 0;
+        end
+    end
+
+    // --- step the LFSR only when we reach the period boundary ---
+    // keep seed non-zero on reset
+    always @(posedge CLOCK_50) begin
+        if (reset)
+            lfsr_state <= 32'hFFFF_FFFF; // any non-zero seed
+        else if (period_cycles != 0 && count_cycles == period_cycles - 1)
+            lfsr_state <= lfsr_next;     // advance LFSR once per period
+        else
+            lfsr_state <= lfsr_state;
+    end
+
+    // reuse your combinational rng module but feed it the internal state
+    // rng is expected to be combinational (out = f(in))
+    rng rng32(.in(lfsr_state), .out(lfsr_next));
+
+    // --- convert RNG bits to a signed base sample (14-bit) and scale by amplitude ---
+    //
+    // Strategy (minimal, efficient):
+    // - take low 14 bits of lfsr_state as unsigned (0..16383)
+    // - center them around zero: centered = u - 8192  (signed 14-bit range roughly -8192..+8191)
+    // - scale: scaled = (centered * amp14) >>> 13
+    //   where amp14 = amplitude[13:0] (0..16383), shift keeps result within signed 14-bit-ish range
+    // - sign-extend scaled to 32 bits for channel_audio_out
+    //
+    // This gives a perceptually linear-ish amplitude control and needs no external multipliers
+    // beyond the single signed multiply (synthesizable on DSP slices).
+
+    wire [13:0] rand14 = lfsr_state[13:0];               // low 14 bits
+    wire signed [14:0] centered = {1'b0, rand14} - 15'sd8192; // sign-extended subtract
+    wire signed [13:0] amp14 = amplitude[13:0];          // amplitude portion we will use
+
+    // multiply (signed). Result width = 15 + 14 = 29 bits
+    wire signed [28:0] mult_result = centered * $signed({1'b0, amp14});
+
+    // scale down: shift right by 13 to bring back to ~15-bit range (tweakable)
+    wire signed [15:0] scaled16 = mult_result >>> 13; // keeps sign
+
+    // final output: sign-extend to 32 bits (preserve sign)
+    wire signed [31:0] final_out = { {16{scaled16[15]}}, scaled16 };
+
+    // --- produce channel_audio_out at the same timing as before (when period boundary reached) ---
+    always@(posedge CLOCK_50) begin
+        if (period_cycles == 0) begin
+            // preserve the old behavior (when period_cycles==0, you used amplitude directly)
+            channel_audio_out <= amplitude;
+        end else if (count_cycles < period_cycles - 1) begin
+            // hold until the period ticks (same as your original)
+            channel_audio_out <= channel_audio_out;
+        end else begin
+            // on the period boundary, output the newly-scaled noise sample
+            channel_audio_out <= final_out;
+        end
+    end
+
+endmodule
