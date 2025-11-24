@@ -2,7 +2,7 @@
 module instr_decode(
 	input wire clock,
 	input wire reset,
-	input stall,
+	input wire stall,
 	
 	input wire [31:0] if_id_reg,
 	
@@ -51,8 +51,8 @@ wire is_memory = instruction_type == 2'b10;
 wire is_audio = instruction_type == 2'b11;
 
 /* Handle instruction specific opcodes */
-always @(posedge clock) begin
-	if (no_op) begin
+always @(posedge clock, posedge reset) begin
+	if (no_op || reset || stall) begin
 		alu_opcode <= 3'b000;
 		memory_access_code <= 5'b00000;
 		audio_opcode <= 3'b000;	
@@ -124,20 +124,27 @@ always @(posedge clock) begin
 end
 
 /* Handle writeback info */
-always @(posedge clock) begin
+always @(posedge clock, posedge reset) begin
 	writeback_register_encoding <= register_select_1;
-	if (is_arithmetic) 
-		register_writeback_enable <= 2'b11;
+	if (no_op || reset || stall)
+		register_writeback_enable <= 2'b00;
 	else if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
 		register_writeback_enable <= 2'b01;
 	else if (is_move && (operation == 3'b110) /*move upper*/ || is_memory && (operation == 3'b010) /*load upper*/)
 		register_writeback_enable <= 2'b10;
+	else if (is_arithmetic || is_move) 
+		register_writeback_enable <= 2'b11;
 	else
 		register_writeback_enable <= 2'b00;
-		
 end
 	
 always @(posedge clock) audio_channel_select <= channel_select;
-always @(posedge clock) id_ex_instruction <= full_instruction;
+
+always @(posedge clock, posedge reset) begin
+	if (reset || stall || no_op)
+		id_ex_instruction <= 32'd0;
+	else
+		id_ex_instruction <= full_instruction;
+end
 
 endmodule
