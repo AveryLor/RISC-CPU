@@ -1159,6 +1159,7 @@ endmodule
 //
 //endmodule
 
+
 module pipeline_drawer(
     input clock,  
     input resetn, 
@@ -1199,6 +1200,7 @@ module pipeline_drawer(
     localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
     localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
     localparam C_CM = 8'd40; // , (Comma)
+    localparam C_AST = 8'd38; // * (Asterisk for dereference) - using + for now
 
     // Wires from Character Logic
     wire char_drawer_done;
@@ -1267,10 +1269,10 @@ module pipeline_drawer(
                 else if(char_line_idx==2) current_label_char = C_COL;
                 else current_label_char = C_SP;
             end
-            3'd3: begin // "MM: "
+            3'd3: begin // "MEM "
                 if(char_line_idx==0) current_label_char = C_M;
-                else if(char_line_idx==1) current_label_char = C_M;
-                else if(char_line_idx==2) current_label_char = C_COL;
+                else if(char_line_idx==1) current_label_char = C_E;
+                else if(char_line_idx==2) current_label_char = C_M;
                 else current_label_char = C_SP;
             end
             3'd4: begin // "WB: "
@@ -1321,11 +1323,23 @@ module pipeline_drawer(
 
     // --- 6. Helper Functions ---
     
-    // 4-bit Hex to Custom Character Index
-    function [7:0] hex2char;
-        input [3:0] d;
+    // Convert 4-bit value to hex character code (0-9 -> codes 0-9, A-F -> codes 10-15)
+    function [7:0] val_to_hex_char;
+        input [3:0] val;
         begin
-            hex2char = {4'b0000, d}; // 0->0, A->10 (Matches your map)
+            if (val < 4'd10) begin
+                val_to_hex_char = {4'b0000, val}; // 0-9
+            end else begin
+                val_to_hex_char = 8'd10 + (val - 4'd10); // A-F (codes 10-15)
+            end
+        end
+    endfunction
+    
+    // Convert 3-bit register number to character code (0-7)
+    function [7:0] reg_to_char;
+        input [2:0] reg_num;
+        begin
+            reg_to_char = {4'b0000, reg_num}; // R0-R7 maps to char codes 0-7
         end
     endfunction
 
@@ -1349,11 +1363,15 @@ module pipeline_drawer(
             r2 = inst[22:20]; 
             imd = inst[15:0]; 
             
-            r1_c = {1'b0, r1}; 
-            r2_c = {1'b0, r2};
+            // FIXED: Convert register numbers to hex character codes
+            r1_c = reg_to_char(r1); 
+            r2_c = reg_to_char(r2);
             
-            h1 = imd[15:12]; h2 = imd[11:8];
-            h3 = imd[7:4];   h4 = imd[3:0];
+            // FIXED: Convert immediate hex nibbles to character codes
+            h1 = val_to_hex_char(imd[15:12]);
+            h2 = val_to_hex_char(imd[11:8]);
+            h3 = val_to_hex_char(imd[7:4]);
+            h4 = val_to_hex_char(imd[3:0]);
 
             case (opcode)
                 // --- REG-REG (Bit 31=0, Bit 30=0) ---
@@ -1378,28 +1396,28 @@ module pipeline_drawer(
 
                 // --- MEMORY (Type=1) ---
                 // LDW/STW (Reg Ptr) -> LDW R1, *R2
-                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; // + used as *
-                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // * for dereference
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
                 
-                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
 
                 // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
-                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; // Exact 16 chars
-                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
-                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; // Exact 16 chars
+                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
+                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
 
-                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
-                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
-                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
+                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
+                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
 
                 // --- SPECIAL ---
                 6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN
                 
                 // Default
-                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, inst[31:28], inst[27:24], {10{C_SP}}};
+                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, h1, h2, h3, h4, {8{C_SP}}};
             endcase
         end
     endfunction
