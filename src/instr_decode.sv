@@ -1,9 +1,16 @@
 // system verilog file
 module instr_decode(
-	input wire [31:0] if_id_reg,
-	input wire [31:0] register_file [7:0],
 	input wire clock,
 	input wire reset,
+	input stall,
+	
+	input wire [31:0] if_id_reg,
+	
+	// Interface with register file
+	output [2:0] register_select_1,
+	output [2:0] register_select_2,
+	input [31:0] selected_register_value_1, 
+	input [31:0] selected_register_value_2,
 	
 	// Instruction specific opcodes
 	output reg [2:0] alu_opcode,
@@ -32,8 +39,8 @@ wire [1:0]   instruction_type  = full_instruction[30:29];
 wire [2:0]   operation         = full_instruction[28:26];
 wire [1:0]   channel_select    = full_instruction[25:24];
 wire [1:0]   unused            = full_instruction[23:22];
-wire [2:0]   register_select_1 = full_instruction[21:19];
-wire [2:0]   register_select_2 = full_instruction[18:16];
+assign       register_select_1 = full_instruction[21:19];
+assign       register_select_2 = full_instruction[18:16];
 wire [15:0]  immediate_value   = full_instruction[15:0];
 
 // wires for logic
@@ -79,13 +86,13 @@ always @(posedge clock) begin
 	if (immediate_flag) begin
 		// Case: arithmetic immediate, memory immediate, or move lower immediate (3'b101)
 		if (is_arithmetic || is_memory || (is_move && (operation == 3'b101))) begin
-			operand_value1 <= register_file[register_select_1]; // not used in move lower
+			operand_value1 <= selected_register_value_1; // not used in move lower
 			operand_value2[31:16] <= 16'b0;                      
 			operand_value2[15:0]  <= immediate_value;
 		end
 		// Case: move upper immediate (3'b110)
 		else if (is_move && (operation == 3'b110)) begin
-			operand_value1 <= register_file[register_select_1]; // not used
+			operand_value1 <= selected_register_value_1; // not used
 			operand_value2[31:16] <= immediate_value;
 			operand_value2[15:0]  <= 16'b0;                      
 		end
@@ -93,26 +100,26 @@ always @(posedge clock) begin
 		else if (is_audio && (operation == 3'b100)) begin
 			operand_value1[31:16] <= immediate_value;
 			operand_value1[15:0]  <= 16'b0;
-			operand_value2 <= register_file[register_select_2]; // not used
+			operand_value2 <= selected_register_value_2; // not used
 		end
 		// Case: audio period immediate (operation == 3'b110)
 		else if (is_audio && (operation == 3'b110)) begin
 			operand_value1[31:24] <= 8'b0;                       
 			operand_value1[23:8]  <= immediate_value;           
 			operand_value1[7:0]   <= 8'b0;                       
-			operand_value2 <= register_file[register_select_2];
+			operand_value2 <= selected_register_value_2;
 		end
 		// default: immediate_flag set but instruction doesn't match expected patterns
 		else begin 
 			// assume programmer mistakenly set immediate_flag, fall back to register operands
-			operand_value1 <= register_file[register_select_1];
-			operand_value2 <= register_file[register_select_2];
+			operand_value1 <= selected_register_value_1;
+			operand_value2 <= selected_register_value_2;
 		end
 	end
 	else begin
 		// no immediate: both operands come from register file
-		operand_value1 <= register_file[register_select_1];
-		operand_value2 <= register_file[register_select_2];
+		operand_value1 <= selected_register_value_1;
+		operand_value2 <= selected_register_value_2;
 	end
 end
 
