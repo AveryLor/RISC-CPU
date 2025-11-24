@@ -239,7 +239,7 @@ module memory_for_vga (
 	input [31:0] data_to_store,
 	input [4:0] memory_access_code, 
 	input [31:0] memory_address,
-	input CLOCK_50,			
+	input clock,			
 	input [1:0] prev_r,	
 	/* Outputs are sent to memory/writeback pipeline register, for memory instructions */
 	output [31:0] writeback_register_data,	// Unused, don't connnect to anything
@@ -372,7 +372,7 @@ module memory_for_vga (
 	};
 	
     bram_8_bytes bram0 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[0]),
         .addr(B_address[0]),
         .din(B_data_to_write[0]),
@@ -381,7 +381,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram1 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[1]),
         .addr(B_address[1]),
         .din(B_data_to_write[1]),
@@ -390,7 +390,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram2 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[2]),
         .addr(B_address[2]),
         .din(B_data_to_write[2]),
@@ -399,7 +399,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram3 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[3]),
         .addr(B_address[3]),
         .din(B_data_to_write[3]),
