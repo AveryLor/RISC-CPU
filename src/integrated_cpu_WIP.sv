@@ -197,7 +197,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   
   
   // EX/MEM Registers
-  wire [7:0] mem_instruct;
+  wire [31:0] mem_instruct;
   wire [1:0] ex_mem_regwrite;
   wire [31:0] ex_mem_reg_arithmetic_result;
   wire [2:0] ex_mem_reg_wb_enc;
@@ -232,7 +232,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   
   
   // MEM/WB Registers
-  wire [7:0] wb_instruct;
+  wire [31:0] wb_instruct;
   
   
   wire [1:0] mem_wb_regwrite;
@@ -401,9 +401,7 @@ module instr_fetch(clk, resetn, stall, if_id_reg, pc_out);
   input stall;
   output [1:0] pc_out;
   reg [15:0] pc;				// program counter (new)
-  output reg [7:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
-
-  wire [7:0] instr_rom_out;
+  output reg [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
   
   assign pc_out = pc;
   
@@ -561,7 +559,8 @@ module instr_decode
 			else if (is_audio && (operation == 3'b110)) begin
 				operand_value1[31:24] <= 8'b0;                       
 				operand_value1[23:8]  <= immediate_value;           
-				operand_value1[7:0]   <= 8'b0;                       
+				operand_value1[
+				]   <= 8'b0;                       
 				operand_value2 <= selected_register_value_2;
 			end
 			// default: immediate_flag set but instruction doesn't match expected patterns
@@ -629,7 +628,7 @@ module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_re
   input [1:0] id_ex_reg_audio_channel_select;
   
   // EX/MEM Registers
-  output reg [7:0] mem_instruct;
+  output reg [31:0] mem_instruct;
   output reg [1:0] ex_mem_regwrite;
   output reg [31:0] ex_mem_reg_arithmetic_result;
   output reg [2:0] ex_mem_reg_wb_enc;
@@ -690,12 +689,12 @@ module instr_mem(clk, resetn, ex_mem_regwrite, ex_mem_reg_wb_enc, ex_mem_reg_ari
   input [1:0] ex_mem_reg_wb_enc;
   input [31:0] ex_mem_reg_arithmetic_result;
   input ex_mem_regwrite;
-  input [7:0] mem_instruct;
+  input [31:0] mem_instruct;
   
   output reg [1:0] mem_wb_reg_wb_enc;
   output reg [31:0] mem_wb_reg_arithmetic_result;
   output reg mem_wb_regwrite;
-  output reg [7:0] wb_instruct;
+  output reg [31:0] wb_instruct;
   
   always @ (posedge clk or negedge resetn) begin
     if (!resetn) begin
