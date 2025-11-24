@@ -7,7 +7,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   output [6:0] HEX1;
 
   // Necessary values
-  wire [7:0] instruction_state = SW[7:0];
+  // wire [7:0] instruction_state = SW[7:0]; <- not used, can remove
 
   // Clock pulse and reset
   wire clock_pulse = ~KEY[1];
@@ -18,46 +18,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 
   // Registers
   wire [31:0] IR; // Special purpose
-  
-  // Pipeline registers
-  // IF/ID Registers
-  wire [7:0] if_id_reg; // Doubles as ID_instruct
-  
-  // ID/EX Registers
-  wire [7:0] ex_instruct; 
-  wire [1:0] id_ex_regwrite;
-  wire [2:0] id_ex_reg_alu_opcode;
-  wire [31:0] id_ex_reg_operand_val1;
-  wire [31:0] id_ex_reg_operand_val2;
-  wire [1:0] id_ex_reg_wb_enc; 
-  wire [4:0] id_ex_reg_memory_access_code;
-  wire [2:0] id_ex_reg_wb_data_select_hotcode;
-  
-  wire [2:0] id_ex_reg_audio_opcode;
-  wire [1:0] id_ex_reg_audio_channel_select;
-  wire [1:0] id_ex_reg_audio_channel_select;
-  
-  // EX/MEM Registers
-  wire [7:0] mem_instruct;
-  wire ex_mem_regwrite;
-  wire [31:0] ex_mem_reg_arithmetic_result;
-  wire [1:0] ex_mem_reg_wb_enc;
-  
-  // MEM/WB Registers
-  wire [7:0] wb_instruct;
-  wire mem_wb_regwrite;
-  wire [1:0] mem_wb_reg_wb_enc;
-  wire [31:0] mem_wb_reg_arithmetic_result;
-  
 
 
   // Register file conntrol
-  wire we;
+  wire [1:0] we; //
   wire [31:0] wdata; 
-  wire [1:0] r_write_enc;
+  wire [2:0] r_write_enc; //
 
-  wire [1:0] r_enc_0;
-  wire [1:0] r_enc_1;
+  wire [2:0] r_enc_0; //
+  wire [2:0] r_enc_1; //
 
   wire [31:0] rf_out_val1;
   wire [31:0] rf_out_val2;
@@ -67,7 +36,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   
   wire [31:0] regiser_tracker [7:0]; 
   output [31:0] register_file [7:0]; 
-  assign register_file = regiser_tracker; 
+  //assign register_file = regiser_tracker; 
 
   reg_file reg_file_inst(
       .clk(clock_pulse),
@@ -87,12 +56,18 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 
       .R0_val(R0_val),
       .R1_val(R1_val), 
-		.register_output(regiser_tracker) 
+		//.register_output(regiser_tracker) 
   );
 
   // Hex display for register file
   display_hex display_hex_inst0(R0_val, HEX0);
   display_hex display_hex_inst1(R1_val, HEX1);
+  
+  // Audio control
+  wire [2:0] audio_opcode;
+  wire [1:0] audio_channel_select;
+  
+  // Audio instantiation
 
   // ALU Control 
   wire [2:0] alu_opcode;
@@ -100,7 +75,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [31:0] alu_reg_val2;
   wire [31:0] alu_result; 
 
-  wire bs;
+  wire bs;  // lol
 
   // ALU instantiation
   ALU alu_inst(
@@ -130,30 +105,9 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .if_id_reg(if_id_reg),
 		.pc_out(LEDR[1:0])
   );
-
-  instr_decode instr_decode_inst(
-      .clk(clock_pulse),
-      .stall(stall),
-      .resetn(resetn),
-		
-
-      .rf_enc_0(r_enc_0),
-      .rf_enc_1(r_enc_1),
-
-      .rf_out_val1(rf_out_val1),
-      .rf_out_val2(rf_out_val2),
-
-      .if_id_reg(if_id_reg), 
-
-      .id_ex_reg_val1(id_ex_reg_val1),
-      .id_ex_reg_val2(id_ex_reg_val2), 
-      .id_ex_reg_mode(id_ex_reg_mode),
-      .id_ex_reg_opcode(id_ex_reg_opcode),
-      .id_ex_reg_wb_enc(id_ex_reg_wb_enc),
-      .id_ex_regwrite(id_ex_regwrite),
-
-      .ex_instruct(ex_instruct)
-  );
+  
+  // IF/ID Registers
+  wire [31:0] if_id_reg; // Doubles as ID_instruct // 32
   
   instr_decode instr_decode_inst(
 		.clock(clock_pulse),
@@ -168,7 +122,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 		.selected_register_value_2(rf_out_val2),
 		
 		.alu_opcode(id_ex_reg_alu_opcode),
-		.memory_access_code(id_ex_reg_memory_acccess_code),
+		.memory_access_code(id_ex_reg_memory_access_code),
 		
 		.audio_opcode(id_ex_reg_audio_opcode),
 		.audio_channel_select(id_ex_reg_audio_channel_select),
@@ -182,6 +136,20 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 				
 		.id_ex_instruction(ex_instruct) // for hazard and VGA
   );
+    
+  // ID/EX Registers
+  wire [31:0] ex_instruct; 
+  wire [1:0] id_ex_regwrite;
+  wire [2:0] id_ex_reg_alu_opcode;
+  wire [31:0] id_ex_reg_operand_val1;
+  wire [31:0] id_ex_reg_operand_val2;
+  wire [1:0] id_ex_reg_wb_enc; 
+  wire [4:0] id_ex_reg_memory_access_code;
+  wire [2:0] id_ex_reg_wb_data_select_hotcode;
+    
+  wire [2:0] id_ex_reg_audio_opcode;
+  wire [1:0] id_ex_reg_audio_channel_select;
+
   
   // what does instr_decode need to propogate:
   // 4) id_ex_wb_data_select_hotcode
@@ -201,23 +169,42 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 		
 		// outputs to audio unit.
       .audio_opcode(audio_opcode),
-		.audio_channel_select(audio_channel_seelct)
+		.audio_channel_select(audio_channel_select),
 		
-      .id_ex_reg_alu_opcode(id_ex_reg_alu_opcode),
-      .id_ex_operand_val1(id_ex_reg_operand_val1),
-      .id_ex_operand_val2(id_ex_reg_operand_val2),
-      .id_ex_regwrite(id_ex_regwrite),
-      .id_ex_reg_wb_enc(id_ex_reg_wb_enc),
-		.id_ex_wb_data_select_hotcode(id_ex_reg_data_select_hotcode),
-		.id_ex_memory_access_code(id_ex_reg_memory_access_code),
+		.id_ex_audio_opcode(id_ex_reg_audio_opcode),
+		.id_ex_audio_channel_select(id_ex_reg_memory_access_code),
+      .id_ex_reg_alu_opcode(id_ex_reg_alu_opcode),  
+      .id_ex_operand_val1(id_ex_reg_operand_val1), // propogate
+      .id_ex_operand_val2(id_ex_reg_operand_val2),// propogate
+      .id_ex_regwrite(id_ex_regwrite), // propogate
+      .id_ex_reg_wb_enc(id_ex_reg_wb_enc), // propogate
+		.id_ex_wb_data_select_hotcode(id_ex_reg_data_select_hotcode), // propogate
+		.id_ex_memory_access_code(id_ex_reg_memory_access_code), // propogate
 
-      .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc),
-      .ex_mem_regwrite(ex_mem_regwrite),
-      .ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result),
+      .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc), //
+      .ex_mem_regwrite(ex_mem_regwrite), //
+		.ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result), //
+		
+		// New instructions propogating
+		.ex_mem_reg_operand_val1(ex_mem_reg_operand_val1),
+		.ex_mem_reg_operand_val2(ex_mem_reg_operand_val2),
+		.ex_mem_reg_data_select_hotcode(ex_mem_reg_data_select_hotcode),
+		.ex_mem_reg_memory_access_code(ex_mem_reg_memory_access_code),
 
       .ex_instruct(ex_instruct),
       .mem_instruct(mem_instruct)
   ); 
+  
+  
+  // EX/MEM Registers
+  wire [7:0] mem_instruct;
+  wire [1:0] ex_mem_regwrite;
+  wire [31:0] ex_mem_reg_arithmetic_result;
+  wire [2:0] ex_mem_reg_wb_enc;
+  wire [31:0] ex_mem_reg_operand_val1;
+  wire [31:0] ex_mem_reg_operand_val2;
+  wire [2:0] ex_mem_reg_data_select_hotcode;
+  wire [4:0] ex_mem_reg_memory_access_code;
   
   instr_mem instr_mem_inst(
       .clk(clock_pulse),
@@ -226,27 +213,56 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .ex_mem_regwrite(ex_mem_regwrite),
       .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc),
       .ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result),
-
+		.ex_mem_reg_operand_val1(ex_mem_reg_operand_val1),
+		.ex_mem_reg_operand_val2(ex_mem_reg_operand_val2),
+		.ex_mem_reg_data_select_hotcode(ex_mem_reg_data_select_hotcode),
+		.ex_mem_reg_memory_access_code(ex_mem_reg_memory_access_code),
+		
       .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
       .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
       .mem_wb_regwrite(mem_wb_regwrite),
+		.mem_wb_reg_memory_wb_data(mem_wb_reg_memory_wb_data), // This 
+		.mem_wb_reg_operand_val2(mem_wb_operand_val2),
+		.mem_wb_reg_data_select_hotcode(mem_wb_reg_data_select_hotcode), 
 
       .mem_instruct(mem_instruct),
       .wb_instruct(wb_instruct)
 
   );
+  
+  
+  // MEM/WB Registers
+  wire [7:0] wb_instruct;
+  
+  
+  wire [1:0] mem_wb_regwrite;
+  wire [2:0] mem_wb_reg_wb_enc;
+  wire [31:0] mem_wb_reg_arithmetic_result;
+  wire [31:0] mem_wb_reg_memory_wb_data;
+  wire [31:0] mem_wb_operand_val2;
+  wire [2:0] mem_wb_reg_data_select_hotcode;
+  
 
   instr_wb instr_wb_inst(
       .clk(clock_pulse),
-
+		.resetn(resetn),
+		
+		.wb_instruct(wb_instruct),
       .mem_wb_regwrite(mem_wb_regwrite),
       .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
       .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
+		.mem_wb_reg_memory_wb_data(mem_wb_reg_memory_wb_data),
+		.mem_wb_reg_operand_val2(mem_wb_reg_operand_val2),
+		.mem_wb_reg_data_select_hotcode(mem_wb_reg_data_select_hotcode),
 
-      .rf_we(we),
-      .rf_w_enc(r_write_enc),
-      .rf_wdata(wdata)
+      .reg_file_write_enable(we),
+      .reg_file_register_encoding(r_write_enc),
+      .reg_file_writeback_data(wdata),
+		
+		.completed_instruction(completed_instruction)
   );
+  
+  wire [31:0] completed_instruction;
   
   // Testing decode: 
   assign LEDR[9:8] = if_id_reg[5:4];
@@ -435,8 +451,9 @@ module instr_fetch(clk, resetn, stall, if_id_reg, pc_out);
 	 
   end
 endmodule
-// system verilog file
-module instr_decode(
+
+module instr_decode
+(
 	input wire clock,
 	input wire reset,
 	input wire stall,
@@ -449,7 +466,7 @@ module instr_decode(
 	input [31:0] selected_register_value_1, 
 	input [31:0] selected_register_value_2,
 	
-	// Instruction specific opcodes
+	// Instruction specific opcodesf
 	output reg [2:0] alu_opcode,
 	output reg [4:0] memory_access_code,
 	output reg [2:0] audio_opcode,
@@ -470,127 +487,127 @@ module instr_decode(
 	output reg [31:0] id_ex_instruction
 );
 
-// breaking down full_instruction
-wire [31:0] full_instruction   = if_id_reg;
-wire         immediate_flag    = if_id_reg[31];
-wire [1:0]   instruction_type  = full_instruction[30:29];
-wire [2:0]   operation         = full_instruction[28:26];
-wire [1:0]   channel_select    = full_instruction[25:24];
-wire [1:0]   unused            = full_instruction[23:22];
-assign       register_select_1 = full_instruction[21:19];
-assign       register_select_2 = full_instruction[18:16];
-wire [15:0]  immediate_value   = full_instruction[15:0];
+	// breaking down full_instruction
+	wire [31:0] full_instruction   = if_id_reg;
+	wire         immediate_flag    = if_id_reg[31];
+	wire [1:0]   instruction_type  = full_instruction[30:29];
+	wire [2:0]   operation         = full_instruction[28:26];
+	wire [1:0]   channel_select    = full_instruction[25:24];
+	wire [1:0]   unused            = full_instruction[23:22];
+	assign       register_select_1 = full_instruction[21:19];
+	assign       register_select_2 = full_instruction[18:16];
+	wire [15:0]  immediate_value   = full_instruction[15:0];
 
-// wires for logic
-wire no_op = instruction_type == 2'b00;
-wire is_arithmetic = (instruction_type ==  2'b01) && !(operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
-wire is_move = (instruction_type ==  2'b01) && (operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
-wire is_memory = instruction_type == 2'b10;
-wire is_audio = instruction_type == 2'b11;
+	// wires for logic
+	wire no_op = instruction_type == 2'b00;
+	wire is_arithmetic = (instruction_type ==  2'b01) && !(operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
+	wire is_move = (instruction_type ==  2'b01) && (operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
+	wire is_memory = instruction_type == 2'b10;
+	wire is_audio = instruction_type == 2'b11;
 
-/* Handle instruction specific opcodes */
-always @(posedge clock, posedge reset) begin
-	if (no_op || reset || stall) begin
-		alu_opcode <= 3'b000;
-		memory_access_code <= 5'b00000;
-		audio_opcode <= 3'b000;	
-	end else
-	if (is_move) begin
-		alu_opcode <= 3'b000;
-		memory_access_code <= 5'b00000;
-		audio_opcode <= 3'b000;
-	end else
-	if (is_arithmetic) begin 
-		alu_opcode <= operation;
-		memory_access_code <= 5'b00000;
-		audio_opcode <= 3'b000;		
-	end else
-	if(is_memory) begin
-		alu_opcode <= 3'b000;
-		memory_access_code[4]   <= operation[2];
-		memory_access_code[3:2] <= {operation[1], operation[1]};
-		memory_access_code[1:0] <= {operation[0], operation[0]};
-		audio_opcode <= 3'b000;	
-	end else
-	if(is_audio) begin
-		alu_opcode <= 3'b000;
-		memory_access_code <= 5'b00000;
-		audio_opcode <= operation;
+	/* Handle instruction specific opcodes */
+	always @(posedge clock, posedge reset) begin
+		if (no_op || reset || stall) begin
+			alu_opcode <= 3'b000;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= 3'b000;	
+		end else
+		if (is_move) begin
+			alu_opcode <= 3'b000;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= 3'b000;
+		end else
+		if (is_arithmetic) begin 
+			alu_opcode <= operation;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= 3'b000;		
+		end else
+		if(is_memory) begin
+			alu_opcode <= 3'b000;
+			memory_access_code[4]   <= operation[2];
+			memory_access_code[3:2] <= {operation[1], operation[1]};
+			memory_access_code[1:0] <= {operation[0], operation[0]};
+			audio_opcode <= 3'b000;	
+		end else
+		if(is_audio) begin
+			alu_opcode <= 3'b000;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= operation;
+		end
 	end
-end
-	
-/* Handle operand values */
-always @(posedge clock) begin
-	if (immediate_flag) begin
-		// Case: arithmetic immediate, memory immediate, or move lower immediate (3'b101)
-		if (is_arithmetic || is_memory || (is_move && (operation == 3'b101))) begin
-			operand_value1 <= selected_register_value_1; // not used in move lower
-			operand_value2[31:16] <= 16'b0;                      
-			operand_value2[15:0]  <= immediate_value;
+		
+	/* Handle operand values */
+	always @(posedge clock) begin
+		if (immediate_flag) begin
+			// Case: arithmetic immediate, memory immediate, or move lower immediate (3'b101)
+			if (is_arithmetic || is_memory || (is_move && (operation == 3'b101))) begin
+				operand_value1 <= selected_register_value_1; // not used in move lower
+				operand_value2[31:16] <= 16'b0;                      
+				operand_value2[15:0]  <= immediate_value;
+			end
+			// Case: move upper immediate (3'b110)
+			else if (is_move && (operation == 3'b110)) begin
+				operand_value1 <= selected_register_value_1; // not used
+				operand_value2[31:16] <= immediate_value;
+				operand_value2[15:0]  <= 16'b0;                      
+			end
+			// Case: audio amplitude immediate (operation == 3'b100)
+			else if (is_audio && (operation == 3'b100)) begin
+				operand_value1[31:16] <= immediate_value;
+				operand_value1[15:0]  <= 16'b0;
+				operand_value2 <= selected_register_value_2; // not used
+			end
+			// Case: audio period immediate (operation == 3'b110)
+			else if (is_audio && (operation == 3'b110)) begin
+				operand_value1[31:24] <= 8'b0;                       
+				operand_value1[23:8]  <= immediate_value;           
+				operand_value1[7:0]   <= 8'b0;                       
+				operand_value2 <= selected_register_value_2;
+			end
+			// default: immediate_flag set but instruction doesn't match expected patterns
+			else begin 
+				// assume programmer mistakenly set immediate_flag, fall back to register operands
+				operand_value1 <= selected_register_value_1;
+				operand_value2 <= selected_register_value_2;
+			end
 		end
-		// Case: move upper immediate (3'b110)
-		else if (is_move && (operation == 3'b110)) begin
-			operand_value1 <= selected_register_value_1; // not used
-			operand_value2[31:16] <= immediate_value;
-			operand_value2[15:0]  <= 16'b0;                      
-		end
-		// Case: audio amplitude immediate (operation == 3'b100)
-		else if (is_audio && (operation == 3'b100)) begin
-			operand_value1[31:16] <= immediate_value;
-			operand_value1[15:0]  <= 16'b0;
-			operand_value2 <= selected_register_value_2; // not used
-		end
-		// Case: audio period immediate (operation == 3'b110)
-		else if (is_audio && (operation == 3'b110)) begin
-			operand_value1[31:24] <= 8'b0;                       
-			operand_value1[23:8]  <= immediate_value;           
-			operand_value1[7:0]   <= 8'b0;                       
-			operand_value2 <= selected_register_value_2;
-		end
-		// default: immediate_flag set but instruction doesn't match expected patterns
-		else begin 
-			// assume programmer mistakenly set immediate_flag, fall back to register operands
+		else begin
+			// no immediate: both operands come from register file
 			operand_value1 <= selected_register_value_1;
 			operand_value2 <= selected_register_value_2;
 		end
 	end
-	else begin
-		// no immediate: both operands come from register file
-		operand_value1 <= selected_register_value_1;
-		operand_value2 <= selected_register_value_2;
+
+	/* Handle writeback info */
+	always @(posedge clock, posedge reset) begin
+		writeback_register_encoding <= register_select_1;
+		if (reset)
+			register_writeback_enable <= 2'b00;
+		else if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
+			register_writeback_enable <= 2'b01;
+		else if (is_move && (operation == 3'b110) /*move upper*/ || is_memory && (operation == 3'b010) /*load upper*/)
+			register_writeback_enable <= 2'b10;
+		else if (is_arithmetic || is_move) 
+			register_writeback_enable <= 2'b11;
+		else
+			register_writeback_enable <= 2'b00;
 	end
-end
 
-/* Handle writeback info */
-always @(posedge clock, posedge reset) begin
-	writeback_register_encoding <= register_select_1;
-	if (no_op || reset || stall)
-		register_writeback_enable <= 2'b00;
-	else if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
-		register_writeback_enable <= 2'b01;
-	else if (is_move && (operation == 3'b110) /*move upper*/ || is_memory && (operation == 3'b010) /*load upper*/)
-		register_writeback_enable <= 2'b10;
-	else if (is_arithmetic || is_move) 
-		register_writeback_enable <= 2'b11;
-	else
-		register_writeback_enable <= 2'b00;
-end
+	always @(posedge clock, posedge reset) writeback_data_select_hotcode <=
+		{
+		is_arithmetic, 
+		is_memory, 
+		is_move, 
+		};
+		
+	always @(posedge clock) audio_channel_select <= channel_select;
 
-always @(posedge clock, posedge reset) writeback_data_select_hotcode <=
-	{
-	is_arithmetic, 
-	is_memory, 
-	is_move, 
-	};
-	
-always @(posedge clock) audio_channel_select <= channel_select;
-
-always @(posedge clock, posedge reset) begin
-	if (reset || stall || no_op)
-		id_ex_instruction <= 32'd0;
-	else
-		id_ex_instruction <= full_instruction;
-end
+	always @(posedge clock, posedge reset) begin
+		if (reset)
+			id_ex_instruction <= 32'd0;
+		else
+			id_ex_instruction <= full_instruction;
+	end
 
 endmodule
 
@@ -598,6 +615,7 @@ module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_re
   input clk;
   input resetn;
   
+  // From ID/EX pipeline
   // From ID/EX pipeline
   input        id_ex_regwrite;
   input [1:0]  id_ex_reg_wb_enc;
@@ -696,25 +714,25 @@ module instr_wb(
 	output reg[31:0] wb_full_instruction		// For VGA
 );
 
-parameter [2:0] is_arithmetic = 3'b100,
-				is_memory     = 3'b010,
-				is_move       = 3'b001;
+	parameter [2:0] is_arithmetic = 3'b100,
+					is_memory     = 3'b010,
+					is_move       = 3'b001;
 
 
-always@(posedge clock, posedge reset) begin
-	if (reset) reg_file_write_enable <= 0; else begin
-		case (writeback_data_select_hotcode)
-			is_arithmetic: 	reg_file_writeback_data <= arithmetic_writeback_data;
-			is_memory:		reg_file_writeback_data <= memory_writeback_data;
-			is_move:		reg_file_writeback_data <= move_writeback_data;
-			default:		reg_file_writeback_data <= 0; // unused
-		endcase
-		reg_file_write_enable <= register_writeback_enable;
-		reg_file_register_encoding <= writeback_register_encoding;
-		
-		wb_full_instruction <= mem_wb_full_instruction; // for VGA
-	end 
-end
+	always@(posedge clock, posedge reset) begin
+		if (reset) reg_file_write_enable <= 0; else begin
+			case (writeback_data_select_hotcode)
+				is_arithmetic: 	reg_file_writeback_data <= arithmetic_writeback_data;
+				is_memory:		reg_file_writeback_data <= memory_writeback_data;
+				is_move:		reg_file_writeback_data <= move_writeback_data;
+				default:		reg_file_writeback_data <= 0; // unused
+			endcase
+			reg_file_write_enable <= register_writeback_enable;
+			reg_file_register_encoding <= writeback_register_encoding;
+			
+			wb_full_instruction <= mem_wb_full_instruction; // for VGA
+		end 
+	end
 
 endmodule
 
