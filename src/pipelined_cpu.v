@@ -1,9 +1,9 @@
-module control_unit(SW, LEDR, KEY, HEX0, HEX1);
+module cpu(SW, LEDR, KEY, HEX0, HEX1);
   // Hardware I/O
   input [9:0] SW;
   input [2:0] KEY;
   output [9:0] LEDR;
-  output [6:0] HEX0;
+  output [6:0] HEX0;x
   output [6:0] HEX1;
 
   // Necessary values
@@ -108,14 +108,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1);
     .stall(stall),
     .out(bs)
   );
-  
+ 
 
   instr_fetch instr_fetch_inst(
       .clk(clock_pulse),
       .stall(stall),
       .resetn(resetn),
 
-      .if_id_reg(if_id_reg)
+      .if_id_reg(if_id_reg),
+		.pc_out(LEDR[1:0])
   );
 
   instr_decode instr_decode_inst(
@@ -263,14 +264,17 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
   end
 endmodule
 
-module instr_fetch(clk, resetn, stall, if_id_reg);
+module instr_fetch(clk, resetn, stall, if_id_reg, pc_out);
   input clk;
   input resetn;
   input stall;
+  output [1:0] pc_out;
   reg [15:0] pc;				// program counter (new)
   output reg [7:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
 
   wire [7:0] instr_rom_out;
+  
+  assign pc_out = pc;
   
   instr_rom instr_rom(
 	.address(pc),
@@ -282,12 +286,22 @@ module instr_fetch(clk, resetn, stall, if_id_reg);
 	);
   
   reg load_enable;
+  
+  reg [2:0] warmup_cnt;
+  wire warmup_done = (warmup_cnt == 2'd2);
   always @ (posedge clk or negedge resetn) begin
     if (!resetn) begin 
       pc <= 0;
       if_id_reg <= 0;
       load_enable <= 1;
+		warmup_cnt <= 0;
     end
+	 else if (warmup_done) begin 
+		pc <= 0;
+		if_id_reg <= 8'd0;
+		load_enable <= 1'b1;
+		warmup_cnt <= 3;
+	 end
     else if (stall) begin 
       pc <= pc;
       if (load_enable) begin
@@ -300,7 +314,9 @@ module instr_fetch(clk, resetn, stall, if_id_reg);
       pc <= pc + 1;
       if_id_reg <= instr_rom_out;
       load_enable <= 1;
+		if(!warmup_done) warmup_cnt <= warmup_cnt + 2'd1;
     end
+	 
   end
 endmodule
 
