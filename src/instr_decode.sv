@@ -154,7 +154,7 @@ module instr_decode(
 		{
 			is_arithmetic, 
 			is_memory, 
-			is_move, 
+			is_move
 		};
 		
 	always @(posedge clk) audio_channel_select <= channel_select;
