@@ -907,54 +907,314 @@ module pc_ir_drawer(clock, resetn, PC_value, IR_value, pc_ir_x, pc_ir_y, pc_ir_c
 
 endmodule
 
+//
+//module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_DATA_OUT, WB_DATA_IN, pipeline_x, pipeline_y, pipeline_color, pipeline_done); 
+//	input clock;  
+//    input resetn; 
+//    
+//    // Data from control unit (example registers)
+//    input [31:0] IF_PC_VALUE; 
+//    input [31:0] ID_VAL_A; 
+//    input [31:0] EX_ALU_RESULT;
+//    input [31:0] MEM_DATA_OUT;
+//    input [31:0] WB_DATA_IN;
+//    
+//    // VGA output coordinates and color
+//    output wire [9:0] pipeline_x;    // 10-bit X coordinate
+//    output wire [8:0] pipeline_y;    // 9-bit Y coordinate
+//    output wire [8:0] pipeline_color; // 9-bit color output
+//    output wire pipeline_done; // Set high when all drawing is complete
+//
+//	 // Drawing parameters
+//	 localparam NUM_STAGES = 5;
+//    localparam LABEL_WIDTH = 5; // e.g., "IF://"
+//    localparam DATA_WIDTH = 8;  // 8 hex digits DATA_WIDTH(32 bits)
+//    localparam CHARS_PER_LINE = LABEL_WIDTH + DATA_WIDTH; // 13
+//    localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE; // 65
+//    
+//    localparam START_X = 200;
+//    localparam START_Y = 25;
+//    localparam CHAR_SPACING = 9; // 8 pixels + 1 spacing
+//    localparam LINE_HEIGHT = 10; // 8 pixels + 2 spacing
+//    
+//    localparam LABEL_COLOR = 9'b111000000; // Bright Red
+//    localparam DATA_COLOR  = 9'b000111000; // Bright Green
+//    localparam BACKGROUND_COLOR = 9'b000000000; // Black
+//	
+//    // Wires from Character Logic ---
+//    wire char_drawer_done;
+//    wire [7:0] char_idx; // Needs to be wide enough for MAX_CHARS (55)
+//    wire [2:0] pixel_x;
+//    wire [2:0] pixel_y;
+//    
+//    // Drawing State Variables
+//    wire [2:0] stage_index; // Current stage being drawn (0 to 4)
+//    wire [3:0] char_line_idx; // Current char position within the 11-char line (0 to 10)
+//    wire [31:0] current_value; // The 32-bit value being displayed
+//    
+//    // Stage Index and Character Position
+//    assign stage_index = char_idx / CHARS_PER_LINE; // 0-IF, 1-ID, 2-EX, 3-MEM, 4-WB
+//    assign char_line_idx = char_idx % CHARS_PER_LINE; // 0-2 for label, 3-10 for data
+//
+//    // Instantiate drawing logic 
+//    char_drawer_logic cdl_inst (
+//        .clock(clock), 
+//        .resetn(resetn), 
+//        .char_count(MAX_CHARS), 
+//        .done(char_drawer_done), 
+//        .char_idx(char_idx), 
+//        .pixel_x(pixel_x), 
+//        .pixel_y(pixel_y)
+//    );
+//
+//	// Connect done signal
+//    assign pipeline_done = char_drawer_done;
+//
+//    // Select the 32-bit value corresponding to the current drawing stage
+//    always @(*) begin
+//        case (stage_index)
+//            3'd0: current_value = IF_PC_VALUE;
+//            3'd1: current_value = ID_VAL_A;
+//            3'd2: current_value = EX_ALU_RESULT;
+//            3'd3: current_value = MEM_DATA_OUT;
+//            3'd4: current_value = WB_DATA_IN;
+//            default: current_value = 32'hDEADBEEF; // Error/Default
+//        endcase
+//    end
+//    
+//    // Stage names: IF, ID, EX, MEM, WB
+//    wire [7:0] stage_labels[0:4][0:4]; // [Stage][Char]
+//	// 5 stages, 4 characters each, 8 
+//    
+//    // Stage 0: IF
+//    assign stage_labels[0][0] = 8'd18; // 'I'
+//    assign stage_labels[0][1] = 8'd15; // 'F'
+//	 assign stage_labels[0][2] = 8'd36; // ':'
+//    assign stage_labels[0][3] = 8'd37; // ' '
+//	 assign stage_labels[0][4] = 8'd37; // ' '
+//    // Stage 1: ID
+//    assign stage_labels[1][0] = 8'd18; // 'I'
+//    assign stage_labels[1][1] = 8'd13; // 'D'
+//	 assign stage_labels[1][2] = 8'd36; // ':'
+//    assign stage_labels[1][3] = 8'd37; // ' '
+//	 assign stage_labels[1][4] = 8'd37; // ' '
+//    
+//	// Stage 2: EX
+//    assign stage_labels[2][0] = 8'd14; // 'E'
+//    assign stage_labels[2][1] = 8'd33; // 'X'
+//    assign stage_labels[2][2] = 8'd36; // ':'
+//	 assign stage_labels[2][3] = 8'd37; // ' '
+//	 assign stage_labels[2][4] = 8'd37; // ' '
+//
+//    // Stage 3: MEM
+//    assign stage_labels[3][0] = 8'd22; // 'M'
+//    assign stage_labels[3][1] = 8'd14; // 'E'
+//    assign stage_labels[3][2] = 8'd22; // 'M'
+//	 assign stage_labels[3][3] = 8'd36; // ':'
+//	 assign stage_labels[3][4] = 8'd37; // ' '
+//    
+//	// Stage 4: WB
+//    assign stage_labels[4][0] = 8'd32; // 'W'
+//    assign stage_labels[4][1] = 8'd11; // 'B'
+//	 assign stage_labels[4][2] = 8'd36; // ':'
+//    assign stage_labels[4][3] = 8'd37; // ' '
+//	 assign stage_labels[4][4] = 8'd37; // ' '
+//	 
+//	 // --- CUSTOM CHARACTER MAPPING CONSTANTS ---
+//    // These match YOUR character module exactly
+//    localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
+//    localparam C_1 = 8'd1;  localparam C_9 = 8'd9;  localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33;
+//    localparam C_2 = 8'd2;  localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
+//    localparam C_3 = 8'd3;  localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
+//    localparam C_4 = 8'd4;  localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28; 
+//    localparam C_5 = 8'd5;  localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; localparam C_COL = 8'd36; // :
+//    localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
+//    localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
+//
+//    // --- ASSEMBLY DECODING LOGIC ---
+//
+//    // Define 16 columns (128 bits total string width)
+//    wire [7:0] column_values [15:0]; 
+//    wire [31:0] curRegister = register_file[row_idx]; 
+//    
+//    // This wire holds the full 16-character string derived from the function
+//    wire [127:0] assembly_string;
+//    
+//    // Call the function combinatorially
+//    assign assembly_string = get_assembly_string(curRegister);
+//
+//    // Map the big string into the character array
+//    genvar i;
+//    generate
+//        for (i = 0; i < 16; i = i + 1) begin : assign_chars
+//            assign column_values[i] = assembly_string[ (127 - (i*8)) -: 8 ];
+//        end
+//    endgenerate
+//
+//    // --- FUNCTION: Binary to Custom Assembly String ---
+//    function [127:0] get_assembly_string;
+//        input [31:0] inst;
+//        
+//        reg [5:0] opcode;
+//        reg [2:0] r1;
+//        reg [2:0] r2;
+//        reg [15:0] imd;
+//        
+//        reg [7:0] r1_c;
+//        reg [7:0] r2_c;
+//        reg [7:0] h1, h2, h3, h4; 
+//        
+//        begin
+//            // Initialize with spaces
+//            get_assembly_string = {16{C_SP}};
+//            
+//            opcode = inst[31:26];
+//            r1 = inst[25:23]; 
+//            r2 = inst[22:20]; 
+//            imd = inst[15:0]; 
+//            
+//            // Convert Registers indices to characters (0->0, 7->7)
+//            r1_c = hex2char({1'b0, r1}); 
+//            r2_c = hex2char({1'b0, r2});
+//            
+//            // Convert Immediate to characters
+//            h1 = hex2char(imd[15:12]);
+//            h2 = hex2char(imd[11:8]);
+//            h3 = hex2char(imd[7:4]);
+//            h4 = hex2char(imd[3:0]);
+//
+//            case (opcode)
+//                // NOP
+//                6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}};
+//                
+//                // MVW R1, R2 -> M V W _ R 1 _ R 2
+//                6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//                6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//                6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//                
+//                // INC R1
+//                6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}};
+//                
+//                // ADD R1, R2
+//                6'b001001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//                6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//                6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
+//
+//                // ADD R1, #IMD -> A D D _ R 1 _ + H H H H (Using + as #)
+//                6'b101100: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
+//                6'b101001: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
+//                6'b101010: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
+//
+//                // LDW R1, *R2
+//                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
+//                6'b010010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
+//                
+//                // Memory with Immediate Ptr
+//                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+//                6'b110010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+//                
+//                // DI1
+//                6'b111001: get_assembly_string = {C_D, C_I, C_1, {13{C_SP}}};
+//                
+//                // EN
+//                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}};
+//                
+//                // Default: UNK HHHH
+//                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+//            endcase
+//        end
+//    endfunction
+//
+//    // --- Character ROM Input Selection ---
+//    wire [7:0] char_ascii; // ASCII code of the character to draw
+//    
+//    // Determine the character based on whether we are drawing the label (0-2) or the data (3-10)
+//    always @(*) begin
+//        if (char_line_idx < LABEL_WIDTH) begin
+//            // Drawing the Label (Static)
+//            char_ascii = stage_labels[stage_index][char_line_idx];
+//        end else begin
+//            // Drawing the Data (Dynamic Hex)
+//            char_ascii = current_value[(DATA_WIDTH - 1 - (char_line_idx - LABEL_WIDTH)) * 4 +: 4]; // Extract 4 bits
+//        end
+//    end
+//    
+//    // --- Instantiate the Character ROM ---
+//    wire [63:0] pixelLine;
+//    character bmp_inst (
+//        .digit(char_ascii),
+//        .pixelLine(pixelLine)
+//    );
+//
+//    // X/Y Calculation
+//    assign pipeline_x = 200 + (char_line_idx * 9) + pixel_x; 
+//    assign pipeline_y = 25 + (stage_index * 15) + pixel_y; 
+//
+//    // Pixel decoding and Color Assignment
+//    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8]; 
+//    wire pixel_on = current_row[7 - pixel_x];
+//    
+//    assign pipeline_color = pixel_on ? 9'b111111111 : 3'b000;
+//
+//endmodule
 
-module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_DATA_OUT, WB_DATA_IN, pipeline_x, pipeline_y, pipeline_color, pipeline_done); 
-	input clock;  
-    input resetn; 
+module pipeline_drawer(
+    input clock,  
+    input resetn, 
     
-    // Data from control unit (example registers)
-    input [31:0] IF_PC_VALUE; 
-    input [31:0] ID_VAL_A; 
-    input [31:0] EX_ALU_RESULT;
-    input [31:0] MEM_DATA_OUT;
-    input [31:0] WB_DATA_IN;
+    // NOTE: These inputs must be the 32-bit INSTRUCTION for that stage
+    input [31:0] IF_PC_VALUE, 
+    input [31:0] ID_VAL_A, 
+    input [31:0] EX_ALU_RESULT,
+    input [31:0] MEM_DATA_OUT,
+    input [31:0] WB_DATA_IN,
     
     // VGA output coordinates and color
-    output wire [9:0] pipeline_x;    // 10-bit X coordinate
-    output wire [8:0] pipeline_y;    // 9-bit Y coordinate
-    output wire [8:0] pipeline_color; // 9-bit color output
-    output wire pipeline_done; // Set high when all drawing is complete
+    output wire [9:0] pipeline_x,
+    output wire [8:0] pipeline_y,
+    output wire [8:0] pipeline_color,
+    output wire pipeline_done
+);
 
-	 // Drawing parameters
-	 localparam NUM_STAGES = 5;
-    localparam LABEL_WIDTH = 5; // e.g., "IF://"
-    localparam DATA_WIDTH = 8;  // 8 hex digits DATA_WIDTH(32 bits)
-    localparam CHARS_PER_LINE = LABEL_WIDTH + DATA_WIDTH; // 13
-    localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE; // 65
+    // --- Drawing parameters ---
+    localparam NUM_STAGES = 5;
+    
+    // Widths
+    localparam LABEL_WIDTH = 4;      // "IF: "
+    localparam ASM_WIDTH = 16;       // "ADD R0, #FFFF   "
+    localparam CHARS_PER_LINE = LABEL_WIDTH + ASM_WIDTH; // 20
+    localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE;  // 100
     
     localparam START_X = 200;
     localparam START_Y = 25;
-    localparam CHAR_SPACING = 9; // 8 pixels + 1 spacing
-    localparam LINE_HEIGHT = 10; // 8 pixels + 2 spacing
     
-    localparam LABEL_COLOR = 9'b111000000; // Bright Red
-    localparam DATA_COLOR  = 9'b000111000; // Bright Green
-    localparam BACKGROUND_COLOR = 9'b000000000; // Black
-	
-    // Wires from Character Logic ---
+    // --- Custom Character Constants (Based on your character module) ---
+    localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
+    localparam C_1 = 8'd1;  localparam C_9 = 8'd9;  localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33;
+    localparam C_2 = 8'd2;  localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
+    localparam C_3 = 8'd3;  localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
+    localparam C_4 = 8'd4;  localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28; 
+    localparam C_5 = 8'd5;  localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; localparam C_COL = 8'd36; // :
+    localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
+    localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
+    localparam C_CM = 8'd40; // , (Comma)
+
+    // Wires from Character Logic
     wire char_drawer_done;
-    wire [7:0] char_idx; // Needs to be wide enough for MAX_CHARS (55)
+    wire [7:0] char_idx; 
     wire [2:0] pixel_x;
     wire [2:0] pixel_y;
     
     // Drawing State Variables
-    wire [2:0] stage_index; // Current stage being drawn (0 to 4)
-    wire [3:0] char_line_idx; // Current char position within the 11-char line (0 to 10)
-    wire [31:0] current_value; // The 32-bit value being displayed
+    wire [2:0] stage_index;    // 0 to 4
+    wire [4:0] char_line_idx;  // 0 to 19 (Position in line)
     
+    reg [31:0] current_instruction; // The 32-bit instruction being processed
+    wire [127:0] decoded_string;    // The decoded assembly text (16 chars * 8 bits)
+
     // Stage Index and Character Position
-    assign stage_index = char_idx / CHARS_PER_LINE; // 0-IF, 1-ID, 2-EX, 3-MEM, 4-WB
-    assign char_line_idx = char_idx % CHARS_PER_LINE; // 0-2 for label, 3-10 for data
+    assign stage_index = char_idx / CHARS_PER_LINE; 
+    assign char_line_idx = char_idx % CHARS_PER_LINE; 
 
     // Instantiate drawing logic 
     char_drawer_logic cdl_inst (
@@ -967,91 +1227,181 @@ module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_
         .pixel_y(pixel_y)
     );
 
-	// Connect done signal
     assign pipeline_done = char_drawer_done;
 
-    // Select the 32-bit value corresponding to the current drawing stage
+    // --- 1. Select Instruction based on Stage ---
     always @(*) begin
         case (stage_index)
-            3'd0: current_value = IF_PC_VALUE;
-            3'd1: current_value = ID_VAL_A;
-            3'd2: current_value = EX_ALU_RESULT;
-            3'd3: current_value = MEM_DATA_OUT;
-            3'd4: current_value = WB_DATA_IN;
-            default: current_value = 32'hDEADBEEF; // Error/Default
+            3'd0: current_instruction = IF_PC_VALUE;
+            3'd1: current_instruction = ID_VAL_A;
+            3'd2: current_instruction = EX_ALU_RESULT;
+            3'd3: current_instruction = MEM_DATA_OUT;
+            3'd4: current_instruction = WB_DATA_IN;
+            default: current_instruction = 32'h00000000; // NOP
         endcase
     end
     
-    // Stage names: IF, ID, EX, MEM, WB
-    wire [7:0] stage_labels[0:4][0:4]; // [Stage][Char]
-	// 5 stages, 4 characters each, 8 
-    
-    // Stage 0: IF
-    assign stage_labels[0][0] = 8'd18; // 'I'
-    assign stage_labels[0][1] = 8'd15; // 'F'
-	 assign stage_labels[0][2] = 8'd36; // ':'
-    assign stage_labels[0][3] = 8'd37; // ' '
-	 assign stage_labels[0][4] = 8'd37; // ' '
-    // Stage 1: ID
-    assign stage_labels[1][0] = 8'd18; // 'I'
-    assign stage_labels[1][1] = 8'd13; // 'D'
-	 assign stage_labels[1][2] = 8'd36; // ':'
-    assign stage_labels[1][3] = 8'd37; // ' '
-	 assign stage_labels[1][4] = 8'd37; // ' '
-    
-	// Stage 2: EX
-    assign stage_labels[2][0] = 8'd14; // 'E'
-    assign stage_labels[2][1] = 8'd33; // 'X'
-    assign stage_labels[2][2] = 8'd36; // ':'
-	 assign stage_labels[2][3] = 8'd37; // ' '
-	 assign stage_labels[2][4] = 8'd37; // ' '
+    // --- 2. Decode Instruction to String ---
+    assign decoded_string = get_assembly_string(current_instruction);
 
-    // Stage 3: MEM
-    assign stage_labels[3][0] = 8'd22; // 'M'
-    assign stage_labels[3][1] = 8'd14; // 'E'
-    assign stage_labels[3][2] = 8'd22; // 'M'
-	 assign stage_labels[3][3] = 8'd36; // ':'
-	 assign stage_labels[3][4] = 8'd37; // ' '
-    
-	// Stage 4: WB
-    assign stage_labels[4][0] = 8'd32; // 'W'
-    assign stage_labels[4][1] = 8'd11; // 'B'
-	assign stage_labels[4][2] = 8'd36; // ':'
-    assign stage_labels[4][3] = 8'd37; // ' '
-	assign stage_labels[4][4] = 8'd37; // ' '
-	
-	
+    // --- 3. Stage Labels ---
+    reg [7:0] current_label_char;
+    always @(*) begin
+        case (stage_index)
+            3'd0: begin // "IF: "
+                if(char_line_idx==0) current_label_char = C_I;
+                else if(char_line_idx==1) current_label_char = C_F;
+                else if(char_line_idx==2) current_label_char = C_COL;
+                else current_label_char = C_SP;
+            end
+            3'd1: begin // "ID: "
+                if(char_line_idx==0) current_label_char = C_I;
+                else if(char_line_idx==1) current_label_char = C_D;
+                else if(char_line_idx==2) current_label_char = C_COL;
+                else current_label_char = C_SP;
+            end
+            3'd2: begin // "EX: "
+                if(char_line_idx==0) current_label_char = C_E;
+                else if(char_line_idx==1) current_label_char = C_X;
+                else if(char_line_idx==2) current_label_char = C_COL;
+                else current_label_char = C_SP;
+            end
+            3'd3: begin // "MM: "
+                if(char_line_idx==0) current_label_char = C_M;
+                else if(char_line_idx==1) current_label_char = C_M;
+                else if(char_line_idx==2) current_label_char = C_COL;
+                else current_label_char = C_SP;
+            end
+            3'd4: begin // "WB: "
+                if(char_line_idx==0) current_label_char = C_W;
+                else if(char_line_idx==1) current_label_char = C_B;
+                else if(char_line_idx==2) current_label_char = C_COL;
+                else current_label_char = C_SP;
+            end
+            default: current_label_char = C_SP;
+        endcase
+    end
 
-    // --- Character ROM Input Selection ---
-    wire [7:0] char_ascii; // ASCII code of the character to draw
+    // --- 4. Character Selection ---
+    reg [7:0] char_to_draw;
     
-    // Determine the character based on whether we are drawing the label (0-2) or the data (3-10)
     always @(*) begin
         if (char_line_idx < LABEL_WIDTH) begin
-            // Drawing the Label (Static)
-            char_ascii = stage_labels[stage_index][char_line_idx];
+            // Draw Label (e.g. "IF: ")
+            char_to_draw = current_label_char;
         end else begin
-            // Drawing the Data (Dynamic Hex)
-            char_ascii = current_value[(DATA_WIDTH - 1 - (char_line_idx - LABEL_WIDTH)) * 4 +: 4]; // Extract 4 bits
+            // Draw Assembly String
+            // Calculate index into the 128-bit string
+            integer string_char_idx;
+            string_char_idx = char_line_idx - LABEL_WIDTH;
+            char_to_draw = decoded_string[ (127 - (string_char_idx * 8)) -: 8 ];
         end
     end
     
-    // --- Instantiate the Character ROM ---
+    // --- 5. Bitmap & Output ---
     wire [63:0] pixelLine;
     character bmp_inst (
-        .digit(char_ascii),
+        .digit(char_to_draw),
         .pixelLine(pixelLine)
     );
 
     // X/Y Calculation
-    assign pipeline_x = 200 + (char_line_idx * 9) + pixel_x; 
-    assign pipeline_y = 25 + (stage_index * 15) + pixel_y; 
+    assign pipeline_x = START_X + (char_line_idx * 9) + pixel_x; 
+    assign pipeline_y = START_Y + (stage_index * 15) + pixel_y; 
 
-    // Pixel decoding and Color Assignment
+    // Pixel decoding
     wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8]; 
     wire pixel_on = current_row[7 - pixel_x];
     
-    assign pipeline_color = pixel_on ? 9'b111111111 : 3'b000;
+    // Color: Red for Label, Green for Text
+    assign pipeline_color = pixel_on ? 
+                            ((char_line_idx < LABEL_WIDTH) ? 9'b111000000 : 9'b000111000) 
+                            : 9'b000000000;
+
+    // --- 6. Helper Functions ---
+    
+    // 4-bit Hex to Custom Character Index
+    function [7:0] hex2char;
+        input [3:0] d;
+        begin
+            hex2char = {4'b0000, d}; // 0->0, A->10 (Matches your map)
+        end
+    endfunction
+
+    // DECODER FUNCTION
+    function [127:0] get_assembly_string;
+        input [31:0] inst;
+        
+        reg [5:0] opcode;
+        reg [2:0] r1;
+        reg [2:0] r2;
+        reg [15:0] imd;
+        
+        reg [7:0] r1_c, r2_c;
+        reg [7:0] h1, h2, h3, h4;
+        
+        begin
+            get_assembly_string = {16{C_SP}}; // Default Empty
+            
+            opcode = inst[31:26];
+            r1 = inst[25:23]; 
+            r2 = inst[22:20]; 
+            imd = inst[15:0]; 
+            
+            r1_c = hex2char({1'b0, r1}); 
+            r2_c = hex2char({1'b0, r2});
+            
+            h1 = hex2char(imd[15:12]); h2 = hex2char(imd[11:8]);
+            h3 = hex2char(imd[7:4]);   h4 = hex2char(imd[3:0]);
+
+            case (opcode)
+                // --- REG-REG (Bit 31=0, Bit 30=0) ---
+                6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}}; // NOP
+                
+                6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVW R1, R2
+                6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVL R1, R2
+                6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
+                
+                6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}}; // INC R1
+                
+                // ADD/SUB/MUL (Reg-Reg)
+                6'b001001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // ADD R1, R2
+                6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // SUB R1, R2
+                6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MUL R1, R2
+
+                // --- IMMEDIATE (Bit 31=1, Bit 30=0) ---
+                // ADD/SUB/MUL (Reg-Imd) -> ADD R1, #FFFF
+                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+
+                // --- MEMORY (Type=1) ---
+                // LDW/STW (Reg Ptr) -> LDW R1, *R2
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; // + used as *
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+
+                // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
+                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; // Exact 16 chars
+                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+
+                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4}; 
+
+                // --- SPECIAL ---
+                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN
+                
+                // Default
+                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+            endcase
+        end
+    endfunction
 
 endmodule
 
@@ -1176,280 +1526,34 @@ module char_drawer_logic(clock, resetn, char_count, done, char_idx, pixel_x, pix
 endmodule
 
 // Generates the (X, Y) coordinates, 3-bit color, and write pulse (plot).
-//module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file, register_done);
-//    input wire clock; 
-//    input wire resetn;
-//	 input [31:0] register_file [7:0]; 
-//	 output reg register_done; 
-//    
-//    // Outputs to VGA Adapter
-//    output wire [9:0] regs_x;    // Corrected width to 10 bits (0-639)
-//    output wire [8:0] regs_y;    // Used to be 9:0
-//    output wire [8:0] regs_color; // 9-bit color output
-//
-//    // Character Index Pointers
-//    wire [2:0] row_idx; // 0->7 rows
-//    wire [4:0] col_idx; // 0->11 columns
-//    
-//    // Pixel Pointers (Run on every clock cycle to iterate 8x8 character)
-//    reg [2:0] pixel_x; // 0->7 for character width 
-//    reg [2:0] pixel_y; // 0->7 for character height
-//    
-//    // Counters and Flags
-//    wire finishedCharacter; 
-//    wire [5:0] counter;
-//
-//    // --- Register Coordinate Definitions (Unchanged) ---
-//    reg [9:0] y_coordinate [0:7]; // Corrected width to 10 bits
-//    
-//    initial begin
-//        // Y-coordinates corrected to be 10 bits wide
-//        y_coordinate[0] = 25;
-//        y_coordinate[1] = 40;
-//        y_coordinate[2] = 55;
-//        y_coordinate[3] = 70;
-//        y_coordinate[4] = 85;
-//        y_coordinate[5] = 100;
-//        y_coordinate[6] = 115;
-//		  y_coordinate[7] = 130;
-//    end
-//
-//    // 1. Pixel Counter/Finished Character Flag
-//    one_char_counter occ (
-//        .resetn(resetn), 
-//        .clock(clock), 
-//        .counter(counter), 
-//        .finishedCharacter(finishedCharacter)
-//    ); 
-//
-//    // 2. Character Position Stepper (New name for row_drawer)
-//    row_drawer rd (
-//        .clock(clock), 
-//        .resetn(resetn), 
-//        .finishedCharacter(finishedCharacter), 
-//        .row_idx(row_idx), 
-//        .col_idx(col_idx)
-//    ); 
-//    
-//    // 3. Pixel Coordinates Stepper (Runs on every clock cycle)
-//    // This logic was originally incorrectly placed in row_drawer
-//    always @(posedge clock or negedge resetn) begin
-//        if (!resetn) begin
-//            pixel_x <= 0;
-//            pixel_y <= 0;
-//        end else begin
-//            if (pixel_x == 7) begin
-//                pixel_x <= 0;
-//                if (pixel_y == 7) begin
-//                    pixel_y <= 0;
-//                end else begin
-//                    pixel_y <= pixel_y + 1;
-//                end
-//            end else begin
-//                pixel_x <= pixel_x + 1;
-//            end
-//        end
-//    end
-//	 
-//	 // --- ASSEMBLY DECODING LOGIC ---
-//
-//    // Define 16 columns (128 bits total string width) to fit "ADD R1, #FFFF"
-//    wire [7:0] column_values [15:0]; 
-//    wire [31:0] curRegister = register_file[row_idx]; 
-//    
-//    // This wire holds the full 16-character string derived from the function
-//    wire [127:0] assembly_string;
-//    
-//    // Call the function combinatorially
-//    assign assembly_string = get_assembly_string(curRegister);
-//
-//    // Map the big string into the character array (Strings are MSB first)
-//    // "M" is at [127:120], "O" is at [119:112], etc.
-//    genvar i;
-//    generate
-//        for (i = 0; i < 16; i = i + 1) begin : assign_chars
-//            assign column_values[i] = assembly_string[ (127 - (i*8)) -: 8 ];
-//        end
-//    endgenerate
-//
-//    // --- FUNCTION: Binary to Assembly String ---
-//    function [127:0] get_assembly_string;
-//        input [31:0] inst;
-//        
-//        reg [5:0] opcode;
-//        reg [2:0] r1;
-//        reg [2:0] r2;
-//        reg [15:0] imd;
-//        
-//        reg [7:0] r1_char;
-//        reg [7:0] r2_char;
-//        reg [7:0] h1, h2, h3, h4; // Hex characters for immediate
-//        
-//        begin
-//            // Default: Spaces
-//            get_assembly_string = "                "; 
-//            
-//            // Extract Fields (Based on your description)
-//            // Assuming Top 6 bits = Opcode (covers 'imd type' + 'operation')
-//            opcode = inst[31:26];
-//            r1 = inst[25:23]; // Assuming R1 is bits 25-23
-//            r2 = inst[22:20]; // Assuming R2 is bits 22-20
-//            imd = inst[15:0]; // Lower 16 bits for immediate
-//            
-//            // Helpers for Registers (0-7 converted to ASCII)
-//            r1_char = 8'd48 + r1; 
-//            r2_char = 8'd48 + r2;
-//            
-//            // Helpers for Immediate (Hex to ASCII)
-//            h1 = imd[15:12];
-//            h2 = imd[11:8];
-//            h3 = imd[7:4];
-//            h4 = imd[3:0];
-//
-//            case (opcode)
-//                // --- REG-REG OPERATIONS ---
-//                6'b000000: get_assembly_string = "NOP             ";
-//                
-//                6'b001111: get_assembly_string = {"MVW R", r1_char, ", R", r2_char, "      "};
-//                6'b001101: get_assembly_string = {"MVL R", r1_char, ", R", r2_char, "      "};
-//                6'b001110: get_assembly_string = {"MVU R", r1_char, ", R", r2_char, "      "};
-//                
-//                6'b001011: get_assembly_string = {"INC R", r1_char, "          "};
-//                
-//                6'b001001: get_assembly_string = {"ADD R", r1_char, ", R", r2_char, "      "};
-//                6'b001010: get_assembly_string = {"SUB R", r1_char, ", R", r2_char, "      "};
-//                6'b001100: get_assembly_string = {"MUL R", r1_char, ", R", r2_char, "      "};
-//
-//                // --- IMMEDIATE OPERATIONS (Type bit 1) ---
-//                // Note: Codes derived from your list. 
-//                // e.g., ADD imd was listed as 101100 in one place, 001100 in another.
-//                // Assuming standard pattern: Bit 31=1 is immediate.
-//                
-//                6'b101100: get_assembly_string = {"ADD R", r1_char, ", #", h1, h2, h3, h4, "  "};
-//                6'b101001: get_assembly_string = {"SUB R", r1_char, ", #", h1, h2, h3, h4, "  "};
-//                6'b101010: get_assembly_string = {"MUL R", r1_char, ", #", h1, h2, h3, h4, "  "};
-//
-//                // --- MEMORY OPERATIONS ---
-//                // LDW r1, *r2 (010011)
-//                6'b010011: get_assembly_string = {"LDW R", r1_char, ", *R", r2_char, "     "};
-//                6'b010001: get_assembly_string = {"LDU R", r1_char, ", *R", r2_char, "     "};
-//                6'b010010: get_assembly_string = {"STW R", r1_char, ", *R", r2_char, "     "};
-//                
-//                // Memory with Immediate Ptr
-//                6'b110011: get_assembly_string = {"LDW R", r1_char, ", *", h1, h2, h3, h4, " "};
-//                6'b110010: get_assembly_string = {"STW R", r1_char, ", *", h1, h2, h3, h4, " "};
-//
-//                // --- CHANNEL / SPECIAL (Pattern Matching) ---
-//                // DI1 (11100100) - Checking Top 6 bits 111001
-//                6'b111001: begin
-//                    // Check sub-channel bits (bits 21-20 or implied from full code)
-//                    // Assuming bits [1:0] or [25:24] hold the channel index for this specific block
-//                    if (inst[2] == 0) get_assembly_string = "DI1             ";
-//                    else get_assembly_string = "DI?             "; 
-//                end
-//                
-//                6'b111010: get_assembly_string = "EN              ";
-//                
-//                // Default Case for unknown
-//                default:   get_assembly_string = {"UNK ", inst[31:28], inst[27:24]), "          "};
-//            endcase
-//        end
-//    endfunction
-//
-//    // Defines 4 columns, 8 bit identifier each 
-////    wire [7:0] column_values [15:0]; 
-//    
-//    // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
-//    // Example payload: AAAA0001
-////    wire [31:0] curRegister = register_file[row_idx]; 
-////    assign column_values[0] = 8'd27; // R
-////    assign column_values[1] = row_idx; // Number identifier 
-////    assign column_values[2] = 8'd36; // : 
-////	 assign column_values[3] = 8'd37; // Space
-////    assign column_values[4] = curRegister[31:28]; // A
-////	 assign column_values[5] = curRegister[27:24]; // A
-////	 assign column_values[6] = curRegister[23:20]; // A
-////	 assign column_values[7] = curRegister[19:16]; // A
-////	 assign column_values[8] = curRegister[15:12]; // 0
-////	 assign column_values[9] = curRegister[11:8]; // 0
-////	 assign column_values[10] = curRegister[7:4]; // 0
-////	 assign column_values[11] = curRegister[3:0]; // 1
-//    
-//    // --- Map character to bitmap ---
-//    wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
-//    assign current_char_code = column_values[col_idx]; // Use col_idx (0-3) to select char code
-//    
-//    wire [63:0] pixelLine;
-//    character bmp_inst(
-//        .digit(current_char_code), 
-//        .pixelLine(pixelLine)
-//    );
-//
-//    // Re-organize pixelLine into an array of 8 rows (8 bits each)
-//    wire [7:0] pixels [7:0];
-//    assign pixels[0] = pixelLine[7:0];
-//    assign pixels[1] = pixelLine[15:8];
-//    assign pixels[2] = pixelLine[23:16];
-//    assign pixels[3] = pixelLine[31:24];
-//    assign pixels[4] = pixelLine[39:32];
-//    assign pixels[5] = pixelLine[47:40];
-//    assign pixels[6] = pixelLine[55:48];
-//    assign pixels[7] = pixelLine[63:56];
-//
-//
-//    // X position: Start at 10, offset by column index * 9, offset by inner pixel x
-//    assign regs_x = 10 + (col_idx * 9) + pixel_x; 
-//    
-//    // Y position: Start at base row coordinate, offset by inner pixel y
-//    assign regs_y = y_coordinate[row_idx] + pixel_y; 
-//
-//    wire pixel_on;
-//    assign pixel_on = pixels[pixel_y][7-pixel_x];
-//	 assign regs_color = pixel_on ? 9'b111111111 : 9'b000000000;
-//
-//	 // Display pixels in white
-//    always_ff @(posedge clock or negedge resetn) begin
-//		 if (!resetn) begin
-//			  register_done <= 0;
-//		 end else begin
-//			  if (finishedCharacter && row_idx == 7 && col_idx == 11) begin
-//					register_done <= 1'b1;
-//			  end else begin
-//					register_done <= 1'b0;
-//			  end
-//		 end
-//	end
-//
-//endmodule
-
-
 module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file, register_done);
     input wire clock; 
     input wire resetn;
-    input [31:0] register_file [7:0]; 
-    output reg register_done; 
+	 input [31:0] register_file [7:0]; 
+	 output reg register_done; 
     
     // Outputs to VGA Adapter
-    output wire [9:0] regs_x;
-    output wire [8:0] regs_y;
-    output wire [8:0] regs_color; 
+    output wire [9:0] regs_x;    // Corrected width to 10 bits (0-639)
+    output wire [8:0] regs_y;    // Used to be 9:0
+    output wire [8:0] regs_color; // 9-bit color output
 
     // Character Index Pointers
     wire [2:0] row_idx; // 0->7 rows
-    wire [4:0] col_idx; // 0->15 columns (Expanded to fit Assembly strings)
+    wire [4:0] col_idx; // 0->11 columns
     
-    // Pixel Pointers
-    reg [2:0] pixel_x; 
-    reg [2:0] pixel_y; 
+    // Pixel Pointers (Run on every clock cycle to iterate 8x8 character)
+    reg [2:0] pixel_x; // 0->7 for character width 
+    reg [2:0] pixel_y; // 0->7 for character height
     
     // Counters and Flags
     wire finishedCharacter; 
     wire [5:0] counter;
 
-    // --- Register Coordinate Definitions ---
-    reg [9:0] y_coordinate [0:7];
+    // --- Register Coordinate Definitions (Unchanged) ---
+    reg [9:0] y_coordinate [0:7]; // Corrected width to 10 bits
     
     initial begin
+        // Y-coordinates corrected to be 10 bits wide
         y_coordinate[0] = 25;
         y_coordinate[1] = 40;
         y_coordinate[2] = 55;
@@ -1457,10 +1561,10 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
         y_coordinate[4] = 85;
         y_coordinate[5] = 100;
         y_coordinate[6] = 115;
-        y_coordinate[7] = 130;
+		  y_coordinate[7] = 130;
     end
 
-    // 1. Pixel Counter
+    // 1. Pixel Counter/Finished Character Flag
     one_char_counter occ (
         .resetn(resetn), 
         .clock(clock), 
@@ -1468,7 +1572,7 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
         .finishedCharacter(finishedCharacter)
     ); 
 
-    // 2. Character Position Stepper
+    // 2. Character Position Stepper (New name for row_drawer)
     row_drawer rd (
         .clock(clock), 
         .resetn(resetn), 
@@ -1477,7 +1581,8 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
         .col_idx(col_idx)
     ); 
     
-    // 3. Pixel Coordinates Stepper
+    // 3. Pixel Coordinates Stepper (Runs on every clock cycle)
+    // This logic was originally incorrectly placed in row_drawer
     always @(posedge clock or negedge resetn) begin
         if (!resetn) begin
             pixel_x <= 0;
@@ -1495,124 +1600,31 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
             end
         end
     end
+	 
+	 
 
-    // --- CUSTOM CHARACTER MAPPING CONSTANTS ---
-    // These match YOUR character module exactly
-    localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
-    localparam C_1 = 8'd1;  localparam C_9 = 8'd9;  localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33;
-    localparam C_2 = 8'd2;  localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
-    localparam C_3 = 8'd3;  localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
-    localparam C_4 = 8'd4;  localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28; 
-    localparam C_5 = 8'd5;  localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; localparam C_COL = 8'd36; // :
-    localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
-    localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
-
-    // --- ASSEMBLY DECODING LOGIC ---
-
-    // Define 16 columns (128 bits total string width)
-    wire [7:0] column_values [15:0]; 
+    // Defines 4 columns, 8 bit identifier each 
+    wire [7:0] column_values [11:0]; 
+    
+    // We only need an initial block for initial values, but for dynamic content it should be a wire/reg
+    // Example payload: AAAA0001
     wire [31:0] curRegister = register_file[row_idx]; 
+    assign column_values[0] = 8'd27; // R
+    assign column_values[1] = row_idx; // Number identifier 
+    assign column_values[2] = 8'd36; // : 
+	 assign column_values[3] = 8'd37; // Space
+    assign column_values[4] = curRegister[31:28]; // A
+	 assign column_values[5] = curRegister[27:24]; // A
+	 assign column_values[6] = curRegister[23:20]; // A
+	 assign column_values[7] = curRegister[19:16]; // A
+	 assign column_values[8] = curRegister[15:12]; // 0
+	 assign column_values[9] = curRegister[11:8]; // 0
+	 assign column_values[10] = curRegister[7:4]; // 0
+	 assign column_values[11] = curRegister[3:0]; // 1
     
-    // This wire holds the full 16-character string derived from the function
-    wire [127:0] assembly_string;
-    
-    // Call the function combinatorially
-    assign assembly_string = get_assembly_string(curRegister);
-
-    // Map the big string into the character array
-    genvar i;
-    generate
-        for (i = 0; i < 16; i = i + 1) begin : assign_chars
-            assign column_values[i] = assembly_string[ (127 - (i*8)) -: 8 ];
-        end
-    endgenerate
-
-    // --- FUNCTION: Binary to Custom Assembly String ---
-    function [127:0] get_assembly_string;
-        input [31:0] inst;
-        
-        reg [5:0] opcode;
-        reg [2:0] r1;
-        reg [2:0] r2;
-        reg [15:0] imd;
-        
-        reg [7:0] r1_c;
-        reg [7:0] r2_c;
-        reg [7:0] h1, h2, h3, h4; 
-        
-        begin
-            // Initialize with spaces
-            get_assembly_string = {16{C_SP}};
-            
-            opcode = inst[31:26];
-            r1 = inst[25:23]; 
-            r2 = inst[22:20]; 
-            imd = inst[15:0]; 
-            
-            // Convert Registers indices to characters (0->0, 7->7)
-            r1_c = hex2char({1'b0, r1}); 
-            r2_c = hex2char({1'b0, r2});
-            
-            // Convert Immediate to characters
-            h1 = hex2char(imd[15:12]);
-            h2 = hex2char(imd[11:8]);
-            h3 = hex2char(imd[7:4]);
-            h4 = hex2char(imd[3:0]);
-
-            case (opcode)
-                // NOP
-                6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}};
-                
-                // MVW R1, R2 -> M V W _ R 1 _ R 2
-                6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-                6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-                6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-                
-                // INC R1
-                6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}};
-                
-                // ADD R1, R2
-                6'b001001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-                6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-                6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-
-                // ADD R1, #IMD -> A D D _ R 1 _ + H H H H (Using + as #)
-                6'b101100: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-                6'b101001: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-                6'b101010: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-
-                // LDW R1, *R2
-                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
-                6'b010010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
-                
-                // Memory with Immediate Ptr
-                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-                6'b110010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-                
-                // DI1
-                6'b111001: get_assembly_string = {C_D, C_I, C_1, {13{C_SP}}};
-                
-                // EN
-                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}};
-                
-                // Default: UNK HHHH
-                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
-            endcase
-        end
-    endfunction
-
-    // Helper: 4-bit Hex to 8-bit Custom Index
-    function [7:0] hex2char;
-        input [3:0] d;
-        begin
-            // Direct map: 0->0 ... 9->9 ... 10->A ... 15->F
-            hex2char = {4'b0000, d}; 
-        end
-    endfunction
-
     // --- Map character to bitmap ---
-    wire [7:0] current_char_code;
-    assign current_char_code = column_values[col_idx]; 
+    wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
+    assign current_char_code = column_values[col_idx]; // Use col_idx (0-3) to select char code
     
     wire [63:0] pixelLine;
     character bmp_inst(
@@ -1631,28 +1643,29 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
     assign pixels[6] = pixelLine[55:48];
     assign pixels[7] = pixelLine[63:56];
 
-    // X position
+
+    // X position: Start at 10, offset by column index * 9, offset by inner pixel x
     assign regs_x = 10 + (col_idx * 9) + pixel_x; 
-    // Y position
+    
+    // Y position: Start at base row coordinate, offset by inner pixel y
     assign regs_y = y_coordinate[row_idx] + pixel_y; 
 
     wire pixel_on;
     assign pixel_on = pixels[pixel_y][7-pixel_x];
-    assign regs_color = pixel_on ? 9'b111111111 : 9'b000000000;
+	 assign regs_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
-    // Display pixels in white
+	 // Display pixels in white
     always_ff @(posedge clock or negedge resetn) begin
-         if (!resetn) begin
-              register_done <= 0;
-         end else begin
-              // Check for completion at column 15
-              if (finishedCharacter && row_idx == 7 && col_idx == 15) begin
-                    register_done <= 1'b1;
-              end else begin
-                    register_done <= 1'b0;
-              end
-         end
-    end
+		 if (!resetn) begin
+			  register_done <= 0;
+		 end else begin
+			  if (finishedCharacter && row_idx == 7 && col_idx == 11) begin
+					register_done <= 1'b1;
+			  end else begin
+					register_done <= 1'b0;
+			  end
+		 end
+	end
 
 endmodule
 
@@ -2123,6 +2136,16 @@ module character(digit, pixelLine);
 					pixels[3] = 8'b00011100;
 					pixels[4] = 8'b11111110;
 					pixels[5] = 8'b00011100;
+					pixels[6] = 8'b00011000;
+					pixels[7] = 8'b00010000;
+				end
+				40: begin // , (Comma)
+					pixels[0] = 8'b00000000;
+					pixels[1] = 8'b00000000;
+					pixels[2] = 8'b00000000;
+					pixels[3] = 8'b00000000;
+					pixels[4] = 8'b00000000;
+					pixels[5] = 8'b00000000;
 					pixels[6] = 8'b00011000;
 					pixels[7] = 8'b00010000;
 				end
