@@ -2,20 +2,20 @@ module instr_mem (
     input  wire        clk,
     input  wire        resetn,
 
-    input  wire        ex_mem_regwrite,//
+    input  wire [1:0]  ex_mem_regwrite,//
     input  wire [2:0]  ex_mem_reg_wb_enc,//
     input  wire [31:0] ex_mem_reg_arithmetic_result,//
     input  wire [31:0] ex_mem_reg_operand_val1,
     input  wire [31:0] ex_mem_reg_operand_val2,
-    input  wire [3:0]  ex_mem_reg_data_select_hotcode,//
-    input  wire [2:0]  ex_mem_reg_memory_access_code,
+    input  wire [2:0]  ex_mem_reg_data_select_hotcode,//
+    input  wire [4:0]  ex_mem_reg_memory_access_code,
 
     output reg  [2:0]  mem_wb_reg_wb_enc,//
     output reg  [31:0] mem_wb_reg_arithmetic_result,//
-    output reg         mem_wb_regwrite,//
+    output reg  [1:0]  mem_wb_regwrite,//
     output wire [31:0] mem_wb_reg_memory_wb_data,
     output reg  [31:0] mem_wb_reg_operand_val2,//
-    output reg  [3:0]  mem_wb_reg_data_select_hotcode,//
+    output reg  [2:0]  mem_wb_reg_data_select_hotcode,//
 
     input  wire [31:0] mem_instruct,//
     output reg  [31:0] wb_instruct,//
