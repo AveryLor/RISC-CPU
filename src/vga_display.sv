@@ -248,8 +248,19 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_MEMORY_TITLE) ? memory_title_color
 					: pipeline_title_color;
 	
-	wire [31:0] test_input1 = 32'b0010010000000001;
-	wire [31:0] test_input2 = 32'b001011;
+	// First command: ADD R1, R2
+	wire [31:0] test_input1 = 32'b00100100000001000000000000000000;  // ADD R1, r1, r5 (for MIPS)
+
+	// Second command: INC R1
+	wire [31:0] test_input2 = 32'b00101000000000010000000000000000;  // SUB R1, R1, R2 (for MIPS)
+	// R1 = 21, 20, 19
+	// R2 = 18, 17, 16
+	
+	wire [31:0] test_input3 = 32'b11001100000110000000000000111010;  // SUB R1, R1, R2 (for MIPS)
+	
+	wire [31:0] test_input4 = 32'b01100110000000000000000000000000;  // SUB R1, R1, R2 (for MIPS)
+	
+	wire [31:0] test_input5 = 32'b11110001000000000011111111111111;  // SUB R1, R1, R2 (for MIPS)
 
 	// Instantiate all drawing modules
 	reg_title_drawer rtd (
@@ -275,10 +286,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		.clock(CLOCK_50), 
 		.resetn(pipeline_local_resetn), 
 		.IF_PC_VALUE(test_input1), 
-		.ID_VAL_A(test_input1), 
-		.EX_ALU_RESULT(test_input2), 
-		.MEM_DATA_OUT(test_input2), 
-		.WB_DATA_IN(test_input2), 
+		.ID_VAL_A(test_input2), 
+		.EX_ALU_RESULT(test_input3), 
+		.MEM_DATA_OUT(test_input4), 
+		.WB_DATA_IN(test_input5), 
 		.pipeline_x(pipeline_x), 
 		.pipeline_y(pipeline_y), 
 		.pipeline_color(pipeline_color), 
@@ -1200,7 +1211,7 @@ module pipeline_drawer(
     localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
     localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
     localparam C_CM = 8'd40; // , (Comma)
-    localparam C_AST = 8'd38; // * (Asterisk for dereference) - using + for now
+	 localparam C_AST = 8'd41; 
 
     // Wires from Character Logic
     wire char_drawer_done;
@@ -1214,6 +1225,7 @@ module pipeline_drawer(
     
     reg [31:0] current_instruction; // The 32-bit instruction being processed
     wire [127:0] decoded_string;    // The decoded assembly text (16 chars * 8 bits)
+	 reg [39:0] op_imm_r1_only; // R1, #IMD, or nothing
 
     // Stage Index and Character Position
     assign stage_index = char_idx / CHARS_PER_LINE; 
@@ -1269,10 +1281,10 @@ module pipeline_drawer(
                 else if(char_line_idx==2) current_label_char = C_COL;
                 else current_label_char = C_SP;
             end
-            3'd3: begin // "MEM "
+            3'd3: begin // "MM: "
                 if(char_line_idx==0) current_label_char = C_M;
-                else if(char_line_idx==1) current_label_char = C_E;
-                else if(char_line_idx==2) current_label_char = C_M;
+                else if(char_line_idx==1) current_label_char = C_M;
+                else if(char_line_idx==2) current_label_char = C_COL;
                 else current_label_char = C_SP;
             end
             3'd4: begin // "WB: "
@@ -1285,7 +1297,7 @@ module pipeline_drawer(
         endcase
     end
 
-    // Character Selection 
+    // --- 4. Character Selection ---
     reg [7:0] char_to_draw;
     
     always @(*) begin
@@ -1323,23 +1335,11 @@ module pipeline_drawer(
 
     // --- 6. Helper Functions ---
     
-    // Convert 4-bit value to hex character code (0-9 -> codes 0-9, A-F -> codes 10-15)
-    function [7:0] val_to_hex_char;
-        input [3:0] val;
+    // 4-bit Hex to Custom Character Index
+    function [7:0] hex2char;
+        input [3:0] d;
         begin
-            if (val < 4'd10) begin
-                val_to_hex_char = {4'b0000, val}; // 0-9
-            end else begin
-                val_to_hex_char = 8'd10 + (val - 4'd10); // A-F (codes 10-15)
-            end
-        end
-    endfunction
-    
-    // Convert 3-bit register number to character code (0-7)
-    function [7:0] reg_to_char;
-        input [2:0] reg_num;
-        begin
-            reg_to_char = {4'b0000, reg_num}; // R0-R7 maps to char codes 0-7
+            hex2char = {4'b0000, d}; // 0->0, A->10 (Matches your map)
         end
     endfunction
 
@@ -1359,19 +1359,22 @@ module pipeline_drawer(
             get_assembly_string = {16{C_SP}}; // Default Empty
             
             opcode = inst[31:26];
-            r1 = inst[25:23]; 
-            r2 = inst[22:20]; 
+            r1 = inst[21:19]; 
+            r2 = inst[18:16]; 
             imd = inst[15:0]; 
             
-            // FIXED: Convert register numbers to hex character codes
-            r1_c = reg_to_char(r1); 
-            r2_c = reg_to_char(r2);
+            r1_c = hex2char({1'b0, r1}); 
+            r2_c = hex2char({1'b0, r2});
             
-            // FIXED: Convert immediate hex nibbles to character codes
-            h1 = val_to_hex_char(imd[15:12]);
-            h2 = val_to_hex_char(imd[11:8]);
-            h3 = val_to_hex_char(imd[7:4]);
-            h4 = val_to_hex_char(imd[3:0]);
+            h1 = hex2char(imd[15:12]); h2 = hex2char(imd[11:8]);
+            h3 = hex2char(imd[7:4]);   h4 = hex2char(imd[3:0]);
+				
+				op_imm_r1_only = (opcode[5] == 1) ?
+                            // Immediate form (e.g., PD1 #FFFF)
+                            {C_PLS, h1, h2, h3, h4} :
+                            // Register form (e.g., PD1 R1)
+                            {C_R, r1_c, {4{C_SP}}};
+
 
             case (opcode)
                 // --- REG-REG (Bit 31=0, Bit 30=0) ---
@@ -1396,33 +1399,71 @@ module pipeline_drawer(
 
                 // --- MEMORY (Type=1) ---
                 // LDW/STW (Reg Ptr) -> LDW R1, *R2
-                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // * for dereference
-                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
-                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; // + used as *
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
                 
-                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
-                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
-                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; 
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
 
                 // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
-                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; // Exact 16 chars
-                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
-                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
+                // FIX: Added {3{C_SP}} padding to fill the remaining 3 characters of the 16-character width.
+                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
+                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
+                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
 
-                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
-                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
-                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4}; 
+                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
+                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
+                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
 
-                // --- SPECIAL ---
-                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN
+					 
+					 // Pipeline Stage 1 (Assume next block of opcodes, starting at 6'b111000)
+                // DI1, EN1, PD1, AM1
+                6'b111000: get_assembly_string = {C_D, C_I, C_1, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // DI1 R1, R2
+                6'b111001: get_assembly_string = {C_E, C_N, C_1, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // EN1 R1, R2
+                6'b111010: get_assembly_string = {C_P, C_D, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD1 R1 or PD1 #FFFF
+                6'b111011: get_assembly_string = {C_A, C_M, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM1 R1 or AM1 #FFFF
+
+                // DI2, EN2, PD2, AM2, DH2, DQ2, DE2 (7 instructions)
+                // Need to use the full 6-bit opcode for differentiation. Assuming the DIx, ENx, AMx are R1,R2 type,
+                // and PDx is R1/#IMD type, while DH/DQ/DE are simple instructions (1 operand or none).
+
+                // Assuming R-R format for DIx/ENx/AMx
+                6'b111100: get_assembly_string = {C_D, C_I, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // DI2 R1, R2
+                6'b111101: get_assembly_string = {C_E, C_N, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // EN2 R1, R2
+                6'b111110: get_assembly_string = {C_A, C_M, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // AM2 R1, R2
+
+                // Assuming R1/#IMD format for PDx
+                6'b111111: get_assembly_string = {C_P, C_D, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD2 R1 or PD2 #FFFF
+
+                // Assuming Simple commands (1 operand R1) for DH/DQ/DE
+                6'b000100: get_assembly_string = {C_D, C_H, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DH2 R1
+                6'b000101: get_assembly_string = {C_D, C_Q, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DQ2 R1
+                6'b000110: get_assembly_string = {C_D, C_E, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DE2 R1
+
+                // Pipeline Stage 3 (Assuming simple R1/#IMD format for PD3, AM3)
+                6'b000111: get_assembly_string = {C_P, C_D, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD3 R1 or PD3 #FFFF
+                6'b001000: get_assembly_string = {C_A, C_M, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM3 R1 or AM3 #FFFF
+                
+                // Pipeline Stage 4 (Assuming simple R1/#IMD format for PD4, AM4, DI4, EN4)
+                6'b001011: get_assembly_string = {C_P, C_D, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD4 R1 or PD4 #FFFF
+                6'b001100: get_assembly_string = {C_A, C_M, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM4 R1 or AM4 #FFFF
+                6'b001101: get_assembly_string = {C_D, C_I, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // DI4 R1 or DI4 #FFFF
+                6'b001110: get_assembly_string = {C_E, C_N, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // EN4 R1 or EN4 #FFFF
+
+                // Special / Unrecognized
+                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN (Likely enable all or system enable)
                 
                 // Default
-                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, h1, h2, h3, h4, {8{C_SP}}};
+                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
             endcase
         end
     endfunction
 
 endmodule
+
+
 
 // Draws out the title above the register
 module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
@@ -2168,6 +2209,26 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b00011000;
 					pixels[7] = 8'b00010000;
 				end
+//				41: begin // * (Fuzzy Asterisk)
+//					pixels[0] = 8'b10011001; // Row 0
+//					pixels[1] = 8'b01011010; // Row 1
+//					pixels[2] = 8'b00111100; // Row 2
+//					pixels[3] = 8'b11111111; // Row 3
+//					pixels[4] = 8'b11111111; // Row 4
+//					pixels[5] = 8'b00111100; // Row 5
+//					pixels[6] = 8'b01011010; // Row 6
+//					pixels[7] = 8'b10011001; // Row 7
+//				end
+				41: begin //astericks
+					pixels[0] = 8'b00010101;
+					pixels[1] = 8'b00001110;
+					pixels[2] = 8'b00011111;
+					pixels[3] = 8'b00001110;
+					pixels[4] = 8'b00010101;
+					pixels[5] = 8'b00000000;
+					pixels[6] = 8'b00000000;
+					pixels[7] = 8'b00000000;
+				 end
 				default: begin // space (null char)
 					pixels[0] = 8'b00000000;
 					pixels[1] = 8'b00000000;
