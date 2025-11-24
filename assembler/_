@@ -1,230 +1,118 @@
+DEPTH = 65536;
+WIDTH = 32;
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
 
-module audio_cpu (
-	// Inputs
-	CLOCK_50,
-	KEY,
-	SW,
-
-	AUD_ADCDAT,
-
-	// Bidirectionals
-	AUD_BCLK,
-	AUD_ADCLRCK,
-	AUD_DACLRCK,
-
-	FPGA_I2C_SDAT,
-
-	// Outputs
-	AUD_XCK,
-	AUD_DACDAT,
-
-	FPGA_I2C_SCLK,
-	LEDR
-);
-
-
-input				CLOCK_50;
-input		[3:0]	KEY;
-input		[9:0]	SW;
-
-input				AUD_ADCDAT;
-
-inout				AUD_BCLK;
-inout				AUD_ADCLRCK;
-inout				AUD_DACLRCK;
-
-inout				FPGA_I2C_SDAT;
-
-output				AUD_XCK;
-output				AUD_DACDAT;
-output				FPGA_I2C_SCLK;
-output	[9:0] LEDR;
-
-wire				audio_out_allowed;
-wire		[31:0]	left_channel_audio_out;
-wire		[31:0]	right_channel_audio_out;
-wire				write_audio_out;
-wire [31:0] channel_audio_out;
-
-wire clock;
-wire reset;
-wire [2:0] audio_opcode;
-wire [1:0] channel_select;
-wire [31:0] audio_data_to_write;
-
-assign manual_clock = ~KEY[1];
-assign reset = ~KEY[0];
-wire using_manual_clock = SW[0];
-
-// Internal Registers
-assign left_channel_audio_out	= channel_audio_out;
-assign right_channel_audio_out	= channel_audio_out;
-assign write_audio_out			= audio_out_allowed;
-
-// Wires for connecting the master and slave modules
-wire [31:0] amplitude_pulse1, period_pulse1, amplitude_pulse2, period_pulse2;
-wire [1:0]  duty_cycle_pulse1, duty_cycle_pulse2;
-wire        enable_pulse1, enable_pulse2;
-wire [31:0] amplitude_triangle, period_triangle;
-wire        enable_triangle;
-wire [31:0] amplitude_noise, period_noise;
-wire        enable_noise;
-
-assign LEDR[9] = enable_pulse1;
-assign LEDR[8] = enable_pulse2;
-assign LEDR[7] = enable_triangle;
-assign LEDR[6] = enable_noise;
-
-assign LEDR[0] = manual_clock;
-assign LEDR[9:6] = pc[3:0];
-assign LEDR[5:3] = audio_opcode;
-assign LEDR[2:1] = channel_select;
-
-reg [31:0] count;
-reg [15:0] pc;
-reg clock_pulse;
-wire configurable_clock = using_manual_clock ? manual_clock : clock_pulse;
-
-always@(posedge CLOCK_50) begin
-	if (reset) begin
-		clock_pulse <= 0;
-		count <= 0;
-	end else
-	if (count < 32'd5000000) begin
-		count <= count + 1;
-		clock_pulse <= 0;
-	end
-	else begin
-		count <= 0;
-		clock_pulse <= 1;
-	end
-end
-
-always@(posedge configurable_clock) begin
-	if (reset) pc <= 0;
-	else pc <= pc + 1;
-end
-
-//instr fetch
-instr_rom instr_rom(
-	.address(pc),
-	.clock(configurable_clock),
-	.data(0),
-	.wren(0),
-	.q(instruction)
-);
-
-
-
-//instr decode
-instr_decode instr_decode (
-    .clock(configurable_clock),
-    .reset(reset),
-    .stall(0),
-    .if_id_reg(instruction),
-    .register_select_1(),
-    .register_select_2(),
-    .selected_register_value_1(0),
-    .selected_register_value_2(0),
-    .alu_opcode(),
-    .memory_access_code(),
-    .audio_opcode(audio_opcode),
-    .operand_value1(),
-    .operand_value2(),
-    .register_writeback_enable(),
-    .writeback_register_encoding(),
-    .writeback_data_select_hotcode(),
-    .audio_channel_select(channel_select),
-    .id_ex_instruction()
-);
-
-
-
-// Instantiate the audio_synthesizer_master module
-audio_synthesizer_master master (
-  .audio_opcode(audio_opcode),
-  .channel_select(channel_select),
-  .audio_data_to_write(audio_data_to_write),
-  .clock(configurable_clock),
-  .reset(reset),
-  .amplitude_pulse1(amplitude_pulse1),
-  .period_pulse1(period_pulse1),
-  .duty_cycle_pulse1(duty_cycle_pulse1),
-  .enable_pulse1(enable_pulse1),
-  .amplitude_pulse2(amplitude_pulse2),
-  .period_pulse2(period_pulse2),
-  .duty_cycle_pulse2(duty_cycle_pulse2),
-  .enable_pulse2(enable_pulse2),
-  .amplitude_triangle(amplitude_triangle),
-  .period_triangle(period_triangle),
-  .enable_triangle(enable_triangle),
-  .amplitude_noise(amplitude_noise),
-  .period_noise(period_noise),
-  .enable_noise(enable_noise)
-);
-
-// Instantiate the audio_synthesizer_slave module
-audio_synthesizer_slave slave (
-  .CLOCK_50(CLOCK_50),
-  .reset(reset),
-  .amplitude_pulse1(amplitude_pulse1),
-  .period_pulse1(period_pulse1),
-  .duty_cycle_pulse1(duty_cycle_pulse1),
-  .enable_pulse1(enable_pulse1),
-  .amplitude_pulse2(amplitude_pulse2),
-  .period_pulse2(period_pulse2),
-  .duty_cycle_pulse2(duty_cycle_pulse2),
-  .enable_pulse2(enable_pulse2),
-  .amplitude_triangle(amplitude_triangle),
-  .period_triangle(period_triangle),
-  .enable_triangle(enable_triangle),
-  .amplitude_noise(amplitude_noise),
-  .period_noise(period_noise),
-  .enable_noise(enable_noise),
-  .channel_audio_out(channel_audio_out)
-);
-
-
-
-
-Audio_Controller Audio_Controller (
-	// Inputs
-	.CLOCK_50						(CLOCK_50),
-	.reset						(~KEY[0]),
-
-	.clear_audio_in_memory		(),
-	.read_audio_in				(read_audio_in),
-	
-	.clear_audio_out_memory		(),
-	.left_channel_audio_out		(left_channel_audio_out),
-	.right_channel_audio_out	(right_channel_audio_out),
-	.write_audio_out			(write_audio_out),
-
-	.AUD_ADCDAT					(AUD_ADCDAT),
-
-	// Bidirectionals
-	.AUD_BCLK					(AUD_BCLK),
-	.AUD_ADCLRCK				(AUD_ADCLRCK),
-	.AUD_DACLRCK				(AUD_DACLRCK),
-
-
-	// Outputs
-	.audio_in_available			(audio_in_available),
-	.left_channel_audio_in		(left_channel_audio_in),
-	.right_channel_audio_in		(right_channel_audio_in),
-
-	.audio_out_allowed			(audio_out_allowed),
-
-	.AUD_XCK					(AUD_XCK),
-	.AUD_DACDAT					(AUD_DACDAT)
-
-);
-
-avconf #(.USE_MIC_INPUT(0)) avc (
-	.FPGA_I2C_SCLK					(FPGA_I2C_SCLK),
-	.FPGA_I2C_SDAT					(FPGA_I2C_SDAT),
-	.CLOCK_50					(CLOCK_50),
-	.reset						(~KEY[0])
-);
-
-endmodule
+CONTENT BEGIN
+    0000 : F0003FFF;                     -- AM1 0x3FFF
+    0001 : 7C000000;                     -- DE1
+    0002 : EC002508;                     -- PD1 9480
+    0003 : 68000000;                     -- EN1
+    0004 : 00000000;                     -- NOP
+    0005 : 00000000;                     -- NOP
+    0006 : 00000000;                     -- NOP
+    0007 : 00000000;                     -- NOP
+    0008 : 00000000;                     -- NOP
+    0009 : 00000000;                     -- NOP
+    000A : 00000000;                     -- NOP
+    000B : 00000000;                     -- NOP
+    000C : 00000000;                     -- NOP
+    000D : 00000000;                     -- NOP
+    000E : 64000000;                     -- DI1
+    000F : EC002508;                     -- PD1 9480
+    0010 : 68000000;                     -- EN1
+    0011 : 00000000;                     -- NOP
+    0012 : 00000000;                     -- NOP
+    0013 : 00000000;                     -- NOP
+    0014 : 00000000;                     -- NOP
+    0015 : 00000000;                     -- NOP
+    0016 : 00000000;                     -- NOP
+    0017 : 00000000;                     -- NOP
+    0018 : 00000000;                     -- NOP
+    0019 : 00000000;                     -- NOP
+    001A : 00000000;                     -- NOP
+    001B : 64000000;                     -- DI1
+    001C : 00000000;                     -- NOP
+    001D : 00000000;                     -- NOP
+    001E : 00000000;                     -- NOP
+    001F : 00000000;                     -- NOP
+    0020 : 00000000;                     -- NOP
+    0021 : 00000000;                     -- NOP
+    0022 : 00000000;                     -- NOP
+    0023 : 00000000;                     -- NOP
+    0024 : 00000000;                     -- NOP
+    0025 : 00000000;                     -- NOP
+    0026 : EC002508;                     -- PD1 9480
+    0027 : 68000000;                     -- EN1
+    0028 : 00000000;                     -- NOP
+    0029 : 00000000;                     -- NOP
+    002A : 00000000;                     -- NOP
+    002B : 00000000;                     -- NOP
+    002C : 00000000;                     -- NOP
+    002D : 00000000;                     -- NOP
+    002E : 00000000;                     -- NOP
+    002F : 00000000;                     -- NOP
+    0030 : 00000000;                     -- NOP
+    0031 : 00000000;                     -- NOP
+    0032 : 64000000;                     -- DI1
+    0033 : EC002EA9;                     -- PD1 11945
+    0034 : 68000000;                     -- EN1
+    0035 : 00000000;                     -- NOP
+    0036 : 00000000;                     -- NOP
+    0037 : 00000000;                     -- NOP
+    0038 : 00000000;                     -- NOP
+    0039 : 00000000;                     -- NOP
+    003A : 00000000;                     -- NOP
+    003B : 00000000;                     -- NOP
+    003C : 00000000;                     -- NOP
+    003D : 00000000;                     -- NOP
+    003E : 00000000;                     -- NOP
+    003F : 00000000;                     -- NOP
+    0040 : 00000000;                     -- NOP
+    0041 : 00000000;                     -- NOP
+    0042 : 00000000;                     -- NOP
+    0043 : 00000000;                     -- NOP
+    0044 : 00000000;                     -- NOP
+    0045 : 00000000;                     -- NOP
+    0046 : 00000000;                     -- NOP
+    0047 : 00000000;                     -- NOP
+    0048 : 00000000;                     -- NOP
+    0049 : 64000000;                     -- DI1
+    004A : EC002508;                     -- PD1 9480
+    004B : 68000000;                     -- EN1
+    004C : 00000000;                     -- NOP
+    004D : 00000000;                     -- NOP
+    004E : 00000000;                     -- NOP
+    004F : 00000000;                     -- NOP
+    0050 : 00000000;                     -- NOP
+    0051 : 00000000;                     -- NOP
+    0052 : 00000000;                     -- NOP
+    0053 : 00000000;                     -- NOP
+    0054 : 00000000;                     -- NOP
+    0055 : 00000000;                     -- NOP
+    0056 : 64000000;                     -- DI1
+    0057 : EC001F24;                     -- PD1 7972
+    0058 : 68000000;                     -- EN1
+    0059 : 00000000;                     -- NOP
+    005A : 00000000;                     -- NOP
+    005B : 00000000;                     -- NOP
+    005C : 00000000;                     -- NOP
+    005D : 00000000;                     -- NOP
+    005E : 00000000;                     -- NOP
+    005F : 00000000;                     -- NOP
+    0060 : 00000000;                     -- NOP
+    0061 : 00000000;                     -- NOP
+    0062 : 00000000;                     -- NOP
+    0063 : 00000000;                     -- NOP
+    0064 : 00000000;                     -- NOP
+    0065 : 00000000;                     -- NOP
+    0066 : 00000000;                     -- NOP
+    0067 : 00000000;                     -- NOP
+    0068 : 00000000;                     -- NOP
+    0069 : 00000000;                     -- NOP
+    006A : 00000000;                     -- NOP
+    006B : 00000000;                     -- NOP
+    006C : 00000000;                     -- NOP
+    006D : 64000000;                     -- DI1
+    [006E .. FFFF] : 00000000;
+END;
