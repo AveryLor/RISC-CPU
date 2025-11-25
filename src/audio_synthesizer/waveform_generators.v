@@ -120,26 +120,21 @@ always@(posedge CLOCK_50) begin
 	else channel_audio_out <= random_channel_audio_out;
 end
 
-rng rng3(.in(channel_audio_out[31:24]), .out(random_channel_audio_out[31:24]));
-rng rng2(.in(channel_audio_out[23:16]), .out(random_channel_audio_out[23:16]));
-rng rng1(.in(channel_audio_out[15: 8]), .out(random_channel_audio_out[15: 8]));
-rng rng0(.in(channel_audio_out[ 7: 0]), .out(random_channel_audio_out[ 7: 0]));
+rng32 rng32(.in(channel_audio_out), .out(random_channel_audio_out));
 	
 endmodule
 	
 
-module rng(
-	input [7:0] in,
-	output [7:0] out
+module rng32(
+    input  [31:0] in,
+    output [31:0] out
 );
-
-assign out[7] = ~(in[7] ^ in[6]);
-assign out[6] = in[1];
-assign out[5] = in[3] ^ in[0];
-assign out[4] = in[2];
-assign out[3] = in[4];
-assign out[2] = in[0];
-assign out[1] = in[5] ^ in[4];
-assign out[0] = in[6];
-
+ 
+    wire feedback;
+    // XOR taps: 32, 22, 2, 1 -> zero-indexed: 31, 21, 1, 0
+    assign feedback = in[31] ^ in[21] ^ in[1] ^ in[0];
+ 
+    // Shift right, insert feedback at MSB
+    assign out = {feedback, in[31:1]};
+ 
 endmodule
