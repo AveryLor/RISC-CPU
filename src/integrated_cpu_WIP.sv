@@ -455,38 +455,6 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
 	end
   end
   
-  //reg [4:0] warmup_cnt;
-  //wire warmup_done = (warmup_cnt == 2'd2); // change this to <=
-  //wire warmup_really_done = (warmup_cnt >= 2);
-  //always @ (posedge clk or negedge resetn) begin
-  //  if (!resetn) begin 
-  //    pc <= 0;
-  /*   if_id_reg <= 0;
-      load_enable <= 1;
-		warmup_cnt <= 0;
-    end
-	 else if (warmup_done) begin 
-		pc <= 0;
-		if_id_reg <= 8'd0;
-		load_enable <= 1'b1;
-		warmup_cnt <= 3;
-	 end
-    else if (stall) begin 
-      pc <= pc;
-      if (load_enable) begin
-        if_id_reg <= instr_rom_out;
-        load_enable <= 0;
-      end
-      else if_id_reg <= if_id_reg;
-    end
-    else begin
-      pc <= pc + 1;
-      if_id_reg <= instr_rom_out;
-      load_enable <= 1;
-		if(!warmup_really_done) warmup_cnt <= warmup_cnt + 2'd1;
-    end
-	 
-  end*/
 endmodule
 
 module instr_decode
