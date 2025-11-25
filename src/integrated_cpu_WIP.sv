@@ -110,8 +110,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [31:0] if_id_reg; // Doubles as ID_instruct // 32
   
   instr_decode instr_decode_inst(
-		.clock(clock_pulse),
-		.reset(~resetn), // to be changed
+		.clk(clock_pulse),
+		.resetn(resetn), // to be changed
 		.stall(stall), 
 		
 		.if_id_reg(if_id_reg),
@@ -171,15 +171,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .audio_opcode(audio_opcode),
 		.audio_channel_select(audio_channel_select),
 		
-		.id_ex_audio_opcode(id_ex_reg_audio_opcode),
-		.id_ex_audio_channel_select(id_ex_reg_audio_channel_select),
+		.id_ex_reg_audio_opcode(id_ex_reg_audio_opcode),
+		.id_ex_reg_audio_channel_select(id_ex_reg_audio_channel_select),
       .id_ex_reg_alu_opcode(id_ex_reg_alu_opcode),  
-      .id_ex_operand_val1(id_ex_reg_operand_val1), // propogate
-      .id_ex_operand_val2(id_ex_reg_operand_val2),// propogate
+      .id_ex_reg_operand_val1(id_ex_reg_operand_val1), // propogate
+      .id_ex_reg_operand_val2(id_ex_reg_operand_val2),// propogate
       .id_ex_regwrite(id_ex_regwrite), // propogate
       .id_ex_reg_wb_enc(id_ex_reg_wb_enc), // propogate
 		.id_ex_reg_wb_data_select_hotcode(id_ex_reg_wb_data_select_hotcode), // propogate
-		.id_ex_memory_access_code(id_ex_reg_memory_access_code), // propogate
+		.id_ex_reg_memory_access_code(id_ex_reg_memory_access_code), // propogate
 
       .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc), //
       .ex_mem_regwrite(ex_mem_regwrite), //
@@ -207,7 +207,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [4:0] ex_mem_reg_memory_access_code;
   
   
-  instr_mem_inst(
+  instr_mem instr_mem_inst(
       .clk(clock_pulse),
       .resetn(resetn),
 
@@ -800,7 +800,7 @@ parameter [2:0] is_arithmetic = 3'b100,
 
 
 always@(posedge clk, negedge resetn) begin
-	if (resetn) reg_file_write_enable <= 0; else begin
+	if (!resetn) reg_file_write_enable <= 0; else begin
 		case (mem_wb_reg_wb_data_select_hotcode)
 			is_arithmetic: 	reg_file_writeback_data <= mem_wb_reg_arithmetic_result;
 			is_memory:		reg_file_writeback_data <= mem_wb_reg_memory_wb_data;
@@ -909,6 +909,8 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
             temp = 7'b1111111;  // display off (invalid input)
     end
 endmodule
+
+
 
 module memory_io_unit (
 	/* Inputs are from the execute/memory pipeline register */
