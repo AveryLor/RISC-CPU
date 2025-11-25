@@ -420,7 +420,7 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
   assign pc_out = pc;
   
   reg [31:0] buffer;
-  
+  reg [31:0] buffer2;
   instruction_rom instruction_rom(
 	.address(pc),
 	.clock(clk),
@@ -430,32 +430,63 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
 	
 	);
   
-  reg load_enable;
+  reg decrease_pc;
   always @ (posedge clk or negedge resetn) begin
 	if (!resetn) begin
 		pc <= 0;
 		if_id_reg <= 0;
 		buffer <= 0;
-		load_enable <= 1;
+		buffer2 <= 0;
+		decrease_pc <= 0;
 	end
 	else if (stall) begin
 		pc <= pc;
-		if (load_enable) begin
-			buffer <= instr_rom_out;
-			load_enable <= 0;
+		if_id_reg <= if_id_reg;
+		decrease_pc <= 1;
+	end
+	else begin
+		if (decrease_pc) begin
+			pc <= pc - 1;
 		end
 		else begin
-			if_id_reg <= if_id_reg;
-			buffer <= buffer;
+			pc <= pc + 1;
+			if_id_reg <= buffer2;
 		end
-		end
-	else begin
-		buffer <= instr_rom_out;
-		pc <= pc + 1;
-		if_id_reg <= buffer;
-		load_enable <= 1;
 	end
   end
+  
+  //reg [4:0] warmup_cnt;
+  //wire warmup_done = (warmup_cnt == 2'd2); // change this to <=
+  //wire warmup_really_done = (warmup_cnt >= 2);
+  //always @ (posedge clk or negedge resetn) begin
+  //  if (!resetn) begin 
+  //    pc <= 0;
+  /*   if_id_reg <= 0;
+      load_enable <= 1;
+		warmup_cnt <= 0;
+    end
+	 else if (warmup_done) begin 
+		pc <= 0;
+		if_id_reg <= 8'd0;
+		load_enable <= 1'b1;
+		warmup_cnt <= 3;
+	 end
+    else if (stall) begin 
+      pc <= pc;
+      if (load_enable) begin
+        if_id_reg <= instr_rom_out;
+        load_enable <= 0;
+      end
+      else if_id_reg <= if_id_reg;
+    end
+    else begin
+      pc <= pc + 1;
+      if_id_reg <= instr_rom_out;
+      load_enable <= 1;
+		if(!warmup_really_done) warmup_cnt <= warmup_cnt + 2'd1;
+    end
+	 
+  end*/
 endmodule
 
 module instr_decode
