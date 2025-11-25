@@ -637,151 +637,293 @@ module one_second_timer(
 
 endmodule
 
+// Instruction Log Drawer - Displays executed WB stage instructions as a scrolling log
+// It acts as a 22-deep shift register, where the newest instruction is always at index 0 (top).
+module instruction_log_drawer(
+    input clock,
+    input resetn,
+    input [31:0] WB_instruction, // 32-bit instruction from WB stage (latest executed)
+    input WB_valid,             // Pulsed high when new instruction enters WB
+    
+    // VGA output coordinates and color
+    output wire [9:0] log_x,
+    output wire [9:0] log_y,
+    output wire [8:0] log_color,
+    output wire log_done
+);
 
-// Instruction Log Drawer - Displays WB stage instructions as a scrolling log
-// Shows last 10 instructions with the latest in red, older ones in white
-// When log is full, new instructions overwrite oldest ones
-module instruction_log_drawer(clock, resetn, WB_instruction, WB_valid, log_x, log_y, log_color, log_done);
-	// Inputs
-	input clock;
-	input resetn;
-	input [31:0] WB_instruction; // 32-bit instruction from WB stage
-	input WB_valid; // Pulsed high when new instruction enters WB
-	
-	// Outputs
-	output wire [9:0] log_x;
-	output wire [8:0] log_y;
-	output wire [8:0] log_color;
-	output wire log_done;
-	
-	// ===== CIRCULAR BUFFER FOR INSTRUCTION LOG =====
-	reg [31:0] instruction_buffer [num_instructions:0]; // Stores last 10 instructions (0 = oldest, 9 = newest)
-	reg [3:0] buffer_head; // Points to next write location (0-9)
-	reg [3:0] current_instr_idx; // Index of current instruction being drawn
-	
-	integer i;
-	
-	// Initialize buffer
-	initial begin
-		for (i = 0; i < num_instructions; i = i + 1) begin
-			instruction_buffer[i] = 32'h00000000;
-		end
-		buffer_head = 4'd0;
-	end
-	
-	// ===== UPDATE BUFFER WHEN NEW INSTRUCTION ARRIVES =====
-	always @(posedge clock or negedge resetn) begin
-		if (!resetn) begin
-			buffer_head <= 4'd0;
-			for (i = 0; i < num_instructions; i = i + 1) begin
-				instruction_buffer[i] <= 32'h00000000;
-			end
-		end else if (WB_valid) begin
-			// Store new instruction at head position
-			instruction_buffer[buffer_head] <= WB_instruction;
-			
-			// Increment head (circular)
-			if (buffer_head == 4'd9) begin
-				buffer_head <= 4'd0;
-			end else begin
-				buffer_head <= buffer_head + 1'b1;
-			end
-		end
-	end
-	
-	// ===== CHARACTER DRAWING LOGIC =====
-	// Each instruction displays as: "► XXXXXXXX" (16 chars per row)
-	
-	parameter chars_per_instruction = 16; // "►" (1 char) + space (1) + 8 hex (8) + 6 spaces = 16 total
-	parameter num_instructions = 22;
-	parameter max_chars = chars_per_instruction * num_instructions; // 16 * 18
-	
-	wire char_drawer_done;
-	wire [9:0] char_idx; // 0->159
-	wire [2:0] pixel_x; // 0->7
-	wire [2:0] pixel_y; // 0->7
-	
-	char_drawer_logic cdl_inst (
-		.clock(clock),
-		.resetn(resetn),
-		.char_count(max_chars),
-		.done(char_drawer_done),
-		.char_idx(char_idx),
-		.pixel_x(pixel_x),
-		.pixel_y(pixel_y)
-	);
-	
-	// Determine which instruction row and character position
-	wire [4:0] instr_row = char_idx / chars_per_instruction; // 0-9 (which instruction row)
-	wire [4:0] char_in_instr = char_idx % chars_per_instruction; // 0-15 (position within row)
-	
-	// Get the instruction to display (accounting for circular buffer)
-	// Row 0 = oldest, Row 9 = newest
-	wire [3:0] buffer_idx = (buffer_head + instr_row) % 10; // Map row to buffer position
-	wire [31:0] display_instruction = instruction_buffer[buffer_idx];
-	
-	// Determine if this is the newest instruction (red) or older (white)
-	wire is_newest = (instr_row == num_instructions - 1);
-	
-	// Build character code for current position
-	wire [7:0] char_code;
-	
-	always @(*) begin
-		case (char_in_instr)
-			// Position 0: Arrow () for newest, space for others
-			0: char_code = is_newest ? 8'd39 : 8'd37; // 39 = ►, 37 = space
-			// Position 1: Space
-			1: char_code = 8'd37;
-			
-			// Positions 2-9: 8 hex digits of instruction
-			2: char_code = hex_to_char(display_instruction[31:28]);
-			3: char_code = hex_to_char(display_instruction[27:24]);
-			4: char_code = hex_to_char(display_instruction[23:20]);
-			5: char_code = hex_to_char(display_instruction[19:16]);
-			6: char_code = hex_to_char(display_instruction[15:12]);
-			7: char_code = hex_to_char(display_instruction[11:8]);
-			8: char_code = hex_to_char(display_instruction[7:4]);
-			9: char_code = hex_to_char(display_instruction[3:0]);
-			
-			// Positions 10-15: Padding spaces
-			10, 11, 12, 13, 14, 15: char_code = 8'd37;
-			
-			default: char_code = 8'd37;
-		endcase
-	end
-	
-	// Function to convert 4-bit hex to character code
-	function [7:0] hex_to_char(input [3:0] hex_digit);
-		begin
-			if (hex_digit < 10) begin
-				hex_to_char = 8'd0 + hex_digit; // 0-9
-			end else begin
-				hex_to_char = 8'd10 + (hex_digit - 10); // A-F
-			end
-		end
-	endfunction
-	
-	// Get character bitmap
-	wire [63:0] pixelLine;
-	character bmp_inst (
-		.digit(char_code),
-		.pixelLine(pixelLine)
-	);
-	
-	// Position on screen
-	// Start at X=200, Y=150, each instruction row 15 pixels apart
-	assign log_x = 215 + (char_in_instr * 9) + pixel_x;
-	assign log_y = 150 + (instr_row * 15) + pixel_y;
-	
-	// Color: Red for newest (is_newest), white for others
-	wire pixel_on = pixelLine[pixel_y * 8 + (7-pixel_x)]; // Correct bit selection
-	
-	// Color assignment: Red for newest, white for older
-	assign log_color = pixel_on ? (is_newest ? 9'b110000000 : 9'b111111111) : 9'b000000000;
-	
-	// Done signal
-	assign log_done = char_drawer_done;
+    // --- Drawing parameters ---
+    localparam NUM_LOG_ENTRIES = 22;
+    localparam ASM_WIDTH = 16;             // "ADD R0, R1      "
+    localparam MAX_CHARS = NUM_LOG_ENTRIES * ASM_WIDTH;
+    
+    // Drawing Start Position (Adjusted from the old log_drawer location)
+    localparam START_X = 230;
+    localparam START_Y = 150;
+    localparam ROW_HEIGHT = 15;
+    localparam CHAR_WIDTH = 9;
+    
+    // --- Custom Character Constants (Copied from pipeline_drawer for decoding) ---
+    localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
+    localparam C_1 = 8'd1;  localparam C_9 = 8'd9;  localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33;
+    localparam C_2 = 8'd2;  localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
+    localparam C_3 = 8'd3;  localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
+    localparam C_4 = 8'd4;  localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28;  
+    localparam C_5 = 8'd5;  localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; localparam C_COL = 8'd36; // :
+    localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
+    localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
+    localparam C_CM = 8'd40; // , (Comma)
+    localparam C_AST = 8'd41;
+    
+    // --- Instruction Storage (The 22-wide shift register) ---
+    reg [31:0] instruction_log [NUM_LOG_ENTRIES-1:0];
+    integer i;
 
+    // Shift Register Logic
+    always @(posedge clock or negedge resetn) begin
+        if (!resetn) begin
+            // Reset all entries to NOP (32'h0)
+            for (i = 0; i < NUM_LOG_ENTRIES; i = i + 1) begin
+                instruction_log[i] <= 32'h00000000;
+            end
+        end else if (WB_valid) begin
+            // Shift down: instruction_log[i] gets instruction_log[i-1] data
+            // This makes index 0 the newest instruction.
+            for (i = NUM_LOG_ENTRIES - 1; i > 0; i = i - 1) begin
+                instruction_log[i] <= instruction_log[i - 1];
+            end
+            // Newest instruction goes to the top (index 0)
+            instruction_log[0] <= WB_instruction;
+        end
+    end
+    
+    // --- Drawing Logic ---
+    wire char_drawer_done;
+    wire [10:0] char_idx;   // Needs to hold up to 22*16 = 352
+    wire [2:0] pixel_x;
+    wire [2:0] pixel_y;
+    
+    char_drawer_logic cdl_inst (
+        .clock(clock),
+        .resetn(resetn),
+        .char_count(MAX_CHARS),
+        .done(char_drawer_done),
+        .char_idx(char_idx),
+        .pixel_x(pixel_x),
+        .pixel_y(pixel_y)
+    );
+    
+    assign log_done = char_drawer_done;
+
+    // Determine which instruction row and character position
+    wire [4:0] instr_row = char_idx / ASM_WIDTH;      // 0 to 21 (0 is newest)
+    wire [3:0] char_in_instr = char_idx % ASM_WIDTH;  // 0 to 15 (position within assembly string)
+    
+    // Select the instruction to display from the log array
+    wire [31:0] display_instruction = instruction_log[instr_row];
+
+    // Decode instruction to assembly string
+    wire [127:0] decoded_string = get_assembly_string(display_instruction);
+    
+    // Select the character to draw from the decoded string
+    wire [7:0] char_to_draw;
+    
+    always @(*) begin
+        // Calculate index into the 128-bit string (16 chars * 8 bits)
+        // char_in_instr is 0 to 15
+        char_to_draw = decoded_string[ (127 - (char_in_instr * 8)) -: 8 ];
+    end
+
+    // --- Bitmap & Output ---
+    wire [63:0] pixelLine;
+    character bmp_inst (
+        .digit(char_to_draw),
+        .pixelLine(pixelLine)
+    );
+
+    // X/Y Calculation
+    assign log_x = START_X + (char_in_instr * CHAR_WIDTH) + pixel_x;
+    assign log_y = START_Y + (instr_row * ROW_HEIGHT) + pixel_y;
+
+    // Pixel decoding
+    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire pixel_on = current_row[7 - pixel_x];
+    
+    // Color: Bright Green for newest (Row 0), Grey/White for others
+    wire is_newest = (instr_row == 5'd0);
+    assign log_color = pixel_on ? 
+                         (is_newest ? 9'b000111000 : 9'b100100100) // Bright Green : Light Grey/White
+                         : 9'b000000000;
+
+
+    // Hex to character conversion (Copied from pipeline_drawer)
+    function [7:0] hex2char;
+        input [3:0] d;
+        begin
+            hex2char = {4'b0000, d}; // 0->0, A->10 (Matches your map)
+        end
+    endfunction
+
+    // DECODER FUNCTION (Copied from pipeline_drawer)
+    function [127:0] get_assembly_string;
+        input [31:0] inst;
+        
+        reg [5:0] opcode;
+        reg [2:0] r1;
+        reg [2:0] r2;
+        reg [15:0] imd;
+        
+        reg [7:0] r1_c, r2_c;
+        reg [7:0] h1, h2, h3, h4;
+        reg [1:0] channel_select;
+        
+        reg [39:0] op_imm_r1_only;
+
+        
+        begin
+            get_assembly_string = {ASM_WIDTH{C_SP}}; // Default Empty (16 spaces)
+            
+            opcode = inst[31:26];
+            r1 = inst[21:19];
+            r2 = inst[18:16];
+            imd = inst[15:0];
+            
+            r1_c = hex2char({1'b0, r1});
+            r2_c = hex2char({1'b0, r2});
+            
+            h1 = hex2char(imd[15:12]);
+            h2 = hex2char(imd[11:8]);
+            h3 = hex2char(imd[7:4]);
+            h4 = hex2char(imd[3:0]);
+            
+            op_imm_r1_only = (opcode[5] == 1) ?
+                                // Immediate form (e.g., PD1 #FFFF)
+                                {C_PLS, h1, h2, h3, h4, {5{C_SP}}} : // 6 chars + 5 spaces (to fill 16 total with instruction name)
+                                // Register form (e.g., PD1 R1)
+                                {C_R, r1_c, {8{C_SP}}}; // 2 chars + 8 spaces
+                                
+            // Handle padding for instructions that only use 3 chars + R1/IMD
+            // e.g., ADD R1, R2 is 10 chars, needs 6 spaces.
+            // ADD #FFFF is 11 chars, needs 5 spaces.
+            
+            
+            channel_select = inst[25:24];
+            
+            case (opcode)
+                // ALU commands
+                6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}}; // NOP
+                
+                // Moves with registers
+                6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVW R1, R2
+                6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVL R1, R2
+                6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
+                
+                // Immediate value moves
+                6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVL R1, imd
+                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVU R1, imd
+                
+                6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}}; // INC R1
+                
+                // ADD/SUB/MUL (Reg-Reg)
+                6'b001001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // ADD R1, R2
+                6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // SUB R1, R2
+                6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MUL R1, R2
+
+                // ADD/SUB/MUL (Reg-Imd) -> ADD R1, #FFFF
+                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // ADD r1, imd
+                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // SUB r1, imd
+                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MUL r1, imd
+
+                // LDW (loads) (Reg Ptr) -> LDW R1, *R2
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDW r1, *r2
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDL r1, *r2
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}};  // LDU r1, *r2
+                
+                // Stores (STW, STL, STU)
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; //  STW r1, *r2
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STL r1, *r2
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STU r1, *r2
+
+                // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
+                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDW r1, *imd
+                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDL r1, *imd
+                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDU r1, *imd
+                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STW r1, *imd
+                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STL r1, *imd
+                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STU r1, *imd
+                
+                // PDX, registers/immediates
+                6'b011011, 6'b111011: begin
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_P, C_D, C_1, C_SP, op_imm_r1_only, {5{C_SP}}}; // PD1 R1/IMD
+                        2'b01: get_assembly_string = {C_P, C_D, C_2, C_SP, op_imm_r1_only, {5{C_SP}}}; // PD2 R1/IMD
+                        2'b10: get_assembly_string = {C_P, C_D, C_3, C_SP, op_imm_r1_only, {5{C_SP}}}; // PD3 R1/IMD
+                        2'b11: get_assembly_string = {C_P, C_D, C_4, C_SP, op_imm_r1_only, {5{C_SP}}}; // PD4 R1/IMD
+                        default: get_assembly_string = {C_P, C_D, C_X, {13{C_SP}}}; 
+                    endcase
+                end
+                
+                // AMX, registers/immediates
+                6'b011100, 6'b111100: begin 
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_A, C_M, C_1, C_SP, op_imm_r1_only, {5{C_SP}}}; // AM1 R1/IMD
+                        2'b01: get_assembly_string = {C_A, C_M, C_2, C_SP, op_imm_r1_only, {5{C_SP}}}; // AM2 R1/IMD
+                        2'b10: get_assembly_string = {C_A, C_M, C_3, C_SP, op_imm_r1_only, {5{C_SP}}}; // AM3 R1/IMD
+                        2'b11: get_assembly_string = {C_A, C_M, C_4, C_SP, op_imm_r1_only, {5{C_SP}}}; // AM4 R1/IMD
+                        default: get_assembly_string = {C_A, C_M, C_X, {13{C_SP}}};
+                    endcase
+                end
+                
+                // DHX (3 chars, 13 spaces)
+                6'b011101: begin 
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_D, C_H, C_1, {13{C_SP}}}; // DH1
+                        2'b01: get_assembly_string = {C_D, C_H, C_2, {13{C_SP}}}; // DH2
+                        2'b10: get_assembly_string = {C_D, C_H, C_3, {13{C_SP}}}; // DH3
+                        2'b11: get_assembly_string = {C_D, C_H, C_4, {13{C_SP}}}; // DH4
+                        default: get_assembly_string = {C_D, C_H, C_X, {13{C_SP}}};
+                    endcase
+                end
+                
+                // DQX (3 chars, 13 spaces)
+                6'b011110: begin
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_D, C_Q, C_1, {13{C_SP}}}; // DQ1
+                        2'b01: get_assembly_string = {C_D, C_Q, C_2, {13{C_SP}}}; // DQ2
+                        2'b10: get_assembly_string = {C_D, C_Q, C_3, {13{C_SP}}}; // DQ3
+                        2'b11: get_assembly_string = {C_D, C_Q, C_4, {13{C_SP}}}; // DQ4
+                        default: get_assembly_string = {C_D, C_Q, C_X, {13{C_SP}}};
+                    endcase
+                end
+                
+                // DEX (3 chars, 13 spaces)
+                6'b011111: begin
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_D, C_E, C_1, {13{C_SP}}}; // DE1
+                        2'b01: get_assembly_string = {C_D, C_E, C_2, {13{C_SP}}}; // DE2
+                        2'b10: get_assembly_string = {C_D, C_E, C_3, {13{C_SP}}}; // DE3
+                        2'b11: get_assembly_string = {C_D, C_E, C_4, {13{C_SP}}}; // DE4
+                        default: get_assembly_string = {C_D, C_E, C_X, {13{C_SP}}}; 
+                    endcase
+                end
+                
+                // DIX (3 chars, 13 spaces)
+                6'b011001: begin
+                    case (channel_select)
+                        2'b00: get_assembly_string = {C_D, C_I, C_1, {13{C_SP}}}; // DI1
+                        2'b01: get_assembly_string = {C_D, C_I, C_2, {13{C_SP}}}; // DI2
+                        2'b10: get_assembly_string = {C_D, C_I, C_3, {13{C_SP}}}; // DI3
+                        2'b11: get_assembly_string = {C_D, C_I, C_4, {13{C_SP}}}; // DI4
+                        default: get_assembly_string = {C_D, C_I, C_X, {13{C_SP}}};
+                    endcase
+                end
+                    
+                // Default UNK instruction
+                default:    get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+            endcase
+        end
+    endfunction
+    
 endmodule
 
 // Draws out the title above the register
