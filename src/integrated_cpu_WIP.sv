@@ -392,7 +392,9 @@ endmodule
 // ALU Module
 module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
   parameter [2:0] ADD = 3'b001,
-                  INC = 3'b011;
+                  INC = 3'b011,
+				  SUB = 3'b010,
+	              MUL = 3'b100;
 
   input [2:0] opcode;
   input [31:0] register_value_1;
@@ -403,6 +405,8 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
     case (opcode) 
       ADD: arithmetic_result = register_value_1 + register_value_2; 
       INC: arithmetic_result = register_value_1 + 1; 
+	  SUB: arithmetic_result = register_value_1 - register_value_2;
+	  MUL: arithmetic_result = register_value_1 * register_value_2;
       default: arithmetic_result = 32'b0;
     endcase
   end
