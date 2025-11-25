@@ -278,10 +278,7 @@ module control_unit(
   );
   
   wire [31:0] completed_instruction;
-  
 
-  
-  
 endmodule
 
 module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata, R0_val, R1_val); 
@@ -430,27 +427,29 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
 	.q(instr_rom_out)
 	
 	);
+
+	reg [31:0] buffer1;
+	reg [31:0] buffer2;
   
-  reg decrease_pc;
   always @ (posedge clk or negedge resetn) begin
 	if (!resetn) begin
 		pc <= 0;
 		if_id_reg <= 0;
 		decrease_pc <= 0;
+		buffer1 <= 0;
+		buffer2 <= 0;
 	end
 	else if (stall) begin
 		pc <= pc;
 		if_id_reg <= if_id_reg;
-		decrease_pc <= 1;
+		buffer1 <= buffer1;
+		buffer2 <= buffer2;
 	end
 	else begin
-		if (decrease_pc) begin
-			pc <= pc - 1;
-		end
-		else begin
-			pc <= pc + 1;
-			if_id_reg <= buffer2;
-		end
+		pc <= pc + 1;
+		buffer1 <= instr_rom_out;
+		buffer2 <= buffer1;
+		if_id_reg <= buffer2;
 	end
   end
   
