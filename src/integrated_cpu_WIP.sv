@@ -418,9 +418,6 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
   output [31:0] catheter; assign catheter = instr_rom_out;
   wire [31:0] instr_rom_out;
   assign pc_out = pc;
-  
-  reg [31:0] buffer;
-  reg [31:0] buffer2;
   instruction_rom instruction_rom(
 	.address(pc),
 	.clock(clk),
@@ -435,8 +432,6 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
 	if (!resetn) begin
 		pc <= 0;
 		if_id_reg <= 0;
-		buffer <= 0;
-		buffer2 <= 0;
 		decrease_pc <= 0;
 	end
 	else if (stall) begin
