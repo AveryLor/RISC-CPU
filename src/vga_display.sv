@@ -59,6 +59,21 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [8:0] log_color;
 	wire log_done;
 	
+	// Control wires for drawing the ref out
+	wire [9:0] ref_x, ref_y;
+	wire [8:0] ref_color;
+	wire ref_done;
+	
+	// Control wires for drawing the ref out
+	wire [9:0] opcode_title_x, opcode_title_y;
+	wire [8:0] opcode_title_color;
+	wire opcode_title_done;
+	
+	// Control wires for drawing the log title
+	wire [9:0] log_title_x, log_title_y;
+	wire [8:0] log_title_color;
+	wire log_title_done;
+	
 	// FSM control for drawing
 	reg [3:0] state;
 	reg [3:0] next_state;
@@ -69,7 +84,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	parameter DRAW_MEMORY = 4'b0101;
 	parameter DRAW_MEMORY_TITLE = 4'b0110;
 	parameter DRAW_PIPELINE_TITLE = 4'b0111; 
-	parameter DRAW_LOG = 4'b1000; 
+	parameter DRAW_REF = 4'b1000; 
+	parameter DRAW_OPCODE_TITLE = 4'b1001; 
+	parameter DRAW_LOG = 4'b1010; 
+	parameter DRAW_LOG_TITLE = 4'b1011; 
 
 	// Separate done signal detection
 	reg title_done_prev;
@@ -79,7 +97,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	reg memory_done_prev;
 	reg memory_title_done_prev; 
 	reg pipeline_title_done_prev; 
-	reg log_done_prev; 
+	reg ref_done_prev; 
+	reg opcode_title_done_prev;
+	reg log_done_prev; 	
+	reg log_title_done_prev; 
 
 	always @(posedge CLOCK_50 or negedge resetn) begin
 		if (!resetn) begin
@@ -90,7 +111,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			memory_done_prev <= 1'b0;
 			memory_title_done_prev <= 1'b0;
 			pipeline_title_done_prev <= 1'b0; 
-		   log_done_prev <= 1'b0; 
+			ref_done_prev <= 1'b0; 
+			opcode_title_done_prev <= 1'b0; 
+			log_done_prev <= 1'b0; 
+			log_title_done_prev <= 1'b0; 
 		end else begin
 			title_done_prev <= title_done;
 			register_done_prev <= register_done;
@@ -99,7 +123,10 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			memory_done_prev <= memory_done; 
 			memory_title_done_prev <= memory_title_done; 
 			pipeline_title_done_prev <= pipeline_title_done; 
-			log_done_prev <= log_done; 
+			ref_done_prev <= ref_done; 
+			opcode_title_done_prev <= opcode_title_done; 
+			log_done_prev <= log_done;
+			log_title_done_prev <= log_title_done; 
 		end
 	end
 
@@ -165,25 +192,50 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 			
 			DRAW_PIPELINE_TITLE: begin
 				if (pipeline_title_done == 1'b1) begin
-					next_state = DRAW_TITLE;
+					next_state = DRAW_REF;
 				end else begin
 					next_state = DRAW_PIPELINE_TITLE; 
 				end
 			end
 			
-//			DRAW_LOG: begin
-//				if (log_done == 1'b1) begin
-//					next_state = DRAW_TITLE;
-//				end else begin
-//					next_state = DRAW_LOG; 
-//				end
-//			end
+			DRAW_REF: begin
+				if (ref_done == 1'b1) begin
+					next_state = DRAW_OPCODE_TITLE;
+				end else begin
+					next_state = DRAW_REF; 
+				end
+			end
+
+			DRAW_OPCODE_TITLE: begin
+				if (opcode_title_done == 1'b1) begin
+					next_state = DRAW_LOG;
+				end else begin
+					next_state = DRAW_OPCODE_TITLE;
+				end
+			end
+			
+			DRAW_LOG: begin
+				if (log_done == 1'b1) begin
+					next_state = DRAW_LOG_TITLE;
+				end else begin
+					next_state = DRAW_LOG; 
+				end
+			end
+			
+			DRAW_LOG_TITLE: begin
+				if (log_title_done == 1'b1) begin
+					next_state = DRAW_TITLE; 
+				end else begin
+					next_state = DRAW_LOG_TITLE; 
+				end
+			end
 			
 			default: begin
 				next_state = DRAW_TITLE;
 			end
 		endcase
 	end
+	
 
 	// State-based reset signals
 	wire title_local_resetn = resetn && (state == DRAW_TITLE);
@@ -193,35 +245,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire memory_local_resetn = resetn && (state == DRAW_MEMORY); 
 	wire memory_title_local_resetn = resetn && (state == DRAW_MEMORY_TITLE); 
 	wire pipeline_title_resetn = resetn && (state == DRAW_PIPELINE_TITLE); 
+	wire ref_resetn = resetn && (state == DRAW_REF); 
+	wire opcode_title_resetn = resetn && (state == DRAW_OPCODE_TITLE); 
 	wire log_resetn = resetn && (state == DRAW_LOG); 
+	wire log_title_resetn = resetn && (state == DRAW_LOG_TITLE); 
 
-	// MUX for output selection
-//	assign VGA_X = (state == DRAW_TITLE) ? title_x 
-//					: (state == DRAW_REGISTERS) ? regs_x 
-//					: (state == DRAW_PIPELINE) ? pipeline_x 
-//					: (state == DRAW_PC_IR) ? pc_ir_x
-//					: (state == DRAW_MEMORY) ? memory_x
-//					: (state == DRAW_MEMORY_TITLE) ? memory_title_x
-//					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_x
-//					: log_x; 
-//	
-//	assign VGA_Y = (state == DRAW_TITLE) ? title_y 
-//					: (state == DRAW_REGISTERS) ? regs_y 
-//					: (state == DRAW_PIPELINE) ? pipeline_y 
-//					: (state == DRAW_PC_IR) ? pc_ir_y
-//					: (state == DRAW_MEMORY) ? memory_y
-//					: (state == DRAW_MEMORY_TITLE) ? memory_title_y
-//					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_y
-//					: log_y;
-//	
-//	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color 
-//					: (state == DRAW_REGISTERS) ? regs_color 
-//					: (state == DRAW_PIPELINE) ? pipeline_color 
-//					: (state == DRAW_PC_IR) ? pc_ir_color
-//					: (state == DRAW_MEMORY) ? memory_color
-//					: (state == DRAW_MEMORY_TITLE) ? memory_title_color
-//					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_color
-//					: log_color;
 
 	// MUX for output selection
 	assign VGA_X = (state == DRAW_TITLE) ? title_x 
@@ -230,7 +258,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_PC_IR) ? pc_ir_x
 					: (state == DRAW_MEMORY) ? memory_x
 					: (state == DRAW_MEMORY_TITLE) ? memory_title_x
-					: pipeline_title_x; 
+					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_x
+					: (state == DRAW_REF) ? ref_x
+					: (state == DRAW_OPCODE_TITLE) ? opcode_title_x
+					: (state == DRAW_LOG) ? log_x
+					: log_title_x; 
 	
 	assign VGA_Y = (state == DRAW_TITLE) ? title_y 
 					: (state == DRAW_REGISTERS) ? regs_y 
@@ -238,7 +270,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_PC_IR) ? pc_ir_y
 					: (state == DRAW_MEMORY) ? memory_y
 					: (state == DRAW_MEMORY_TITLE) ? memory_title_y
-					: pipeline_title_y;
+					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_y
+					: (state == DRAW_REF) ? ref_y 
+					: (state == DRAW_OPCODE_TITLE) ? opcode_title_y
+					: (state == DRAW_LOG) ? log_y
+					: log_title_y;
 	
 	assign VGA_COLOR = (state == DRAW_TITLE) ? title_color 
 					: (state == DRAW_REGISTERS) ? regs_color 
@@ -246,7 +282,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_PC_IR) ? pc_ir_color
 					: (state == DRAW_MEMORY) ? memory_color
 					: (state == DRAW_MEMORY_TITLE) ? memory_title_color
-					: pipeline_title_color;
+					: (state == DRAW_PIPELINE_TITLE) ? pipeline_title_color
+					: (state == DRAW_REF) ? ref_color
+					: (state == DRAW_OPCODE_TITLE) ? opcode_title_color
+					: (state == DRAW_LOG) ? log_color
+					: log_title_color;
 	
 	// First command: ADD R1, R2
 	wire [31:0] test_input1 = 32'b00100100000001000000000000000000;  // ADD R1, r1, r5 (for MIPS)
@@ -335,17 +375,56 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		.title_done(pipeline_title_done)
 	);
 	
-//	instruction_log_drawer ild(
-//		.clock(CLOCK_50),
-//		.resetn(log_resetn), 
-//		.WB_instruction(32'hAAAAAAAA), 
-//		.WB_valid(1'b0), 
-//		.log_x(log_x), 
-//		.log_y(log_y), 
-//		.log_color(log_color), 
-//		.log_done(log_done)
-//	); 
 
+	opcode_list_drawer old(
+    .clock(CLOCK_50),
+    .resetn(ref_resetn),
+    .ref_x(ref_x),
+    .ref_y(ref_y),
+    .ref_color(ref_color),
+    .ref_done(ref_done), 
+	);
+	
+	opcode_title_drawer otd(
+	// Standard inputs
+	.clock(CLOCK_50),
+	.resetn(opcode_title_resetn),
+	.title_x(opcode_title_x),	  // 10-bit X coordinate
+   .title_y(opcode_title_y),	  // 9-bit Y coordinate
+   .title_color(opcode_title_color), // 9-bit color output
+	.title_done(opcode_title_done)	  // Flag indicating drawing is complete
+	);
+	
+ instruction_log_drawer ild(
+		.clock(CLOCK_50),
+		.resetn(log_resetn), 
+		.WB_instruction(32'hAAAAAAAA), 
+		.WB_valid(pulse), 
+		.log_x(log_x), 
+		.log_y(log_y), 
+		.log_color(log_color), 
+		.log_done(log_done)
+  ); 
+	
+	wire pulse; 
+	one_second_timer fst(
+    .clock(CLOCK_50),
+    .resetn(resetn),
+    .enable_pulse(pulse)
+	);
+
+	// Instantiation of the instruction_log_title_drawer module
+	log_title_drawer ltd(
+		// Standard inputs
+		.clock(CLOCK_50),
+		.resetn(log_title_resetn),
+		.title_x(log_title_x),
+		.title_y(log_title_y),
+		.title_color(log_title_color),
+		.title_done(log_title_done)
+	);
+	
+	
 	vga_adapter VGA (
 		.resetn(resetn),
 		.clock(CLOCK_50),
@@ -367,164 +446,343 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	defparam VGA.BACKGROUND_IMAGE = "./bmp_640_9.mif"; 
 
 endmodule
-//
-//// Instruction Log Drawer - Displays WB stage instructions as a scrolling log
-//// Shows last 10 instructions with the latest in red, older ones in white
-//// When log is full, new instructions overwrite oldest ones
-//module instruction_log_drawer(clock, resetn, WB_instruction, WB_valid, log_x, log_y, log_color, log_done);
-//	// Inputs
-//	input clock;
-//	input resetn;
-//	input [31:0] WB_instruction;  // 32-bit instruction from WB stage
-//	input WB_valid;                // Pulsed high when new instruction enters WB
-//	
-//	// Outputs
-//	output wire [9:0] log_x;
-//	output wire [8:0] log_y;
-//	output wire [8:0] log_color;
-//	output wire log_done;
-//	
-//	// ===== CIRCULAR BUFFER FOR INSTRUCTION LOG =====
-//	reg [31:0] instruction_buffer [9:0];  // Stores last 10 instructions (0 = oldest, 9 = newest)
-//	reg [3:0] buffer_head;                // Points to next write location (0-9)
-//	reg [3:0] current_instr_idx;          // Index of current instruction being drawn
-//	
-//	integer i;
-//	
-//	// Initialize buffer
-//	initial begin
-//		for (i = 0; i < 10; i = i + 1) begin
-//			instruction_buffer[i] = 32'h00000000;
-//		end
-//		buffer_head = 4'd0;
-//	end
-//	
-//	// ===== UPDATE BUFFER WHEN NEW INSTRUCTION ARRIVES =====
-//	always @(posedge clock or negedge resetn) begin
-//		if (!resetn) begin
-//			buffer_head <= 4'd0;
-//			for (i = 0; i < 10; i = i + 1) begin
-//				instruction_buffer[i] <= 32'h00000000;
-//			end
-//		end else if (WB_valid) begin
-//			// Store new instruction at head position
-//			instruction_buffer[buffer_head] <= WB_instruction;
-//			
-//			// Increment head (circular)
-//			if (buffer_head == 4'd9) begin
-//				buffer_head <= 4'd0;
-//			end else begin
-//				buffer_head <= buffer_head + 1'b1;
-//			end
-//		end
-//	end
-//	
-//	// ===== CHARACTER DRAWING LOGIC =====
-//	// Each instruction displays as: "[RED ARROW] XXXXXXXX" (16 chars per row)
-//	// 10 instructions total = 160 characters
-//	
-//	parameter chars_per_instruction = 16;  // "►" (1 char) + space (1) + 8 hex (8) + 6 spaces = 16 total
-//	parameter num_instructions = 10;
-//	parameter max_chars = chars_per_instruction * num_instructions;  // 160
-//	
-//	wire char_drawer_done;
-//	reg [7:0] char_idx;  // 0->159
-//	reg [2:0] pixel_x;   // 0->7
-//	reg [2:0] pixel_y;   // 0->7
-//	
-//	char_drawer_logic cdl_inst (
-//		.clock(clock),
-//		.resetn(resetn),
-//		.char_count(max_chars),
-//		.done(char_drawer_done),
-//		.char_idx(char_idx),
-//		.pixel_x(pixel_x),
-//		.pixel_y(pixel_y)
-//	);
-//	
-//	// Determine which instruction row and character position
-//	wire [3:0] instr_row = char_idx / chars_per_instruction;      // 0-9 (which instruction row)
-//	wire [4:0] char_in_instr = char_idx % chars_per_instruction;  // 0-15 (position within row)
-//	
-//	// Get the instruction to display (accounting for circular buffer)
-//	// Row 0 = oldest, Row 9 = newest
-//	wire [3:0] buffer_idx = (buffer_head + instr_row) % 10;  // Map row to buffer position
-//	wire [31:0] display_instruction = instruction_buffer[buffer_idx];
-//	
-//	// Determine if this is the newest instruction (red) or older (white)
-//	wire is_newest = (instr_row == 9);
-//	
-//	// Build character code for current position
-//	wire [7:0] char_code;
-//	
-//	always @(*) begin
-//		case (char_in_instr)
-//			// Position 0: Arrow (►) for newest, space for others
-////			0: char_code = is_newest ? 8'd39 : 8'd37;  // 39 = ►, 37 = space
-//			0: char_code = 8'd39;  
-//			// Position 1: Space
-//			1: char_code = 8'd37;
-//			
-//			// Positions 2-9: 8 hex digits of instruction
-//			2: char_code = hex_to_char(display_instruction[31:28]);
-//			3: char_code = hex_to_char(display_instruction[27:24]);
-//			4: char_code = hex_to_char(display_instruction[23:20]);
-//			5: char_code = hex_to_char(display_instruction[19:16]);
-//			6: char_code = hex_to_char(display_instruction[15:12]);
-//			7: char_code = hex_to_char(display_instruction[11:8]);
-//			8: char_code = hex_to_char(display_instruction[7:4]);
-//			9: char_code = hex_to_char(display_instruction[3:0]);
-//			
-//			// Positions 10-15: Padding spaces
-//			10, 11, 12, 13, 14, 15: char_code = 8'd37;
-//			
-//			default: char_code = 8'd37;
-//		endcase
-//	end
-//	
-//	// Function to convert 4-bit hex to character code
-//	function [7:0] hex_to_char(input [3:0] hex_digit);
-//		begin
-//			if (hex_digit < 10) begin
-//				hex_to_char = 8'd0 + hex_digit;        // 0-9
-//			end else begin
-//				hex_to_char = 8'd10 + (hex_digit - 10); // A-F
-//			end
-//		end
-//	endfunction
-//	
-//	// Get character bitmap
-//	wire [63:0] pixelLine;
-//	character bmp_inst (
-//		.digit(char_code),
-//		.pixelLine(pixelLine)
-//	);
-//	
-//	// Position on screen
-//	// Start at X=350, Y=20, each instruction row 15 pixels apart
-//	assign log_x = 350 + (char_in_instr * 9) + pixel_x;
-//	assign log_y = 25 + (instr_row * 15) + pixel_y;
-//	
-//	// Color: Red for newest (is_newest), white for others
-//	wire [7:0] pixels [7:0];
-//	assign pixels[0] = pixelLine[7:0];
-//	assign pixels[1] = pixelLine[15:8];
-//	assign pixels[2] = pixelLine[23:16];
-//	assign pixels[3] = pixelLine[31:24];
-//	assign pixels[4] = pixelLine[39:32];
-//	assign pixels[5] = pixelLine[47:40];
-//	assign pixels[6] = pixelLine[55:48];
-//	assign pixels[7] = pixelLine[63:56];
-//	
-//	wire pixel_on = pixels[pixel_y][7-pixel_x];
-//	
-//	// Color assignment: Red for newest, white for older
-//	assign log_color = pixel_on ? (is_newest ? 9'b110000000 : 9'b111111111) : 9'b000000000;
-//	
-//	// Done signal
-//	assign log_done = char_drawer_done;
-//
-//endmodule
+
+
+module log_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
+	// Standard inputs
+	input clock; 
+	input resetn; 
+	output wire [9:0] title_x;    // 10-bit X coordinate
+   output wire [8:0] title_y;    // 9-bit Y coordinate
+   output wire [8:0] title_color; // 9-bit color output
+	output wire title_done; 
+
+	// Spelling out title "INSTRUCTION LOG:"
+	 
+	 wire [7:0] title[0:15]; // 16-character title
+    assign title[0] = 8'd18; // I
+    assign title[1] = 8'd23; // N
+    assign title[2] = 8'd28; // S
+    assign title[3] = 8'd29; // T
+    assign title[4] = 8'd27; // R
+    assign title[5] = 8'd30; // U
+    assign title[6] = 8'd12; // C
+    assign title[7] = 8'd29; // T
+    assign title[8] = 8'd18; // I
+    assign title[9] = 8'd24; // O
+    assign title[10] = 8'd23; // N
+    assign title[11] = 8'd37; // Space
+    assign title[12] = 8'd21; // L
+    assign title[13] = 8'd24; // O
+    assign title[14] = 8'd16; // G
+    assign title[15] = 8'd36; // :
+	 
+    // Keeps track of drawing logic 
+    parameter max_chars = 16;
+    wire char_drawer_done;
+    reg [5:0] char_idx; // 0 -> 8
+    reg [2:0] pixel_x;  // 0 -> 7 for character width
+    reg [2:0] pixel_y;  // 0 -> 7 for character height
+
+    char_drawer_logic cdl_inst (
+        .clock(clock), 
+        .resetn(resetn), 
+        .char_count(max_chars), 
+        .done(char_drawer_done), 
+        .char_idx(char_idx), 
+        .pixel_x(pixel_x), 
+        .pixel_y(pixel_y)
+    );
+
+    wire [63:0] pixelLine;
+    character bmp_inst (
+        .digit(title[char_idx]),
+        .pixelLine(pixelLine)
+    );
+
+    // Each character is 8 pixels wide, with 1 pixel spacing
+    assign title_x = 230 + (char_idx * 9) + pixel_x; 
+    assign title_y = 130 + pixel_y; // vertical base
+
+    wire [7:0] pixels [7:0];
+    assign pixels[0] = pixelLine[7:0];
+    assign pixels[1] = pixelLine[15:8];
+    assign pixels[2] = pixelLine[23:16];
+    assign pixels[3] = pixelLine[31:24];
+    assign pixels[4] = pixelLine[39:32];
+    assign pixels[5] = pixelLine[47:40];
+    assign pixels[6] = pixelLine[55:48];
+    assign pixels[7] = pixelLine[63:56];
+
+    wire pixel_on = pixels[pixel_y][7-pixel_x];
+    assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
+
+    // Final analysis for if drawing is done
+    assign title_done = char_drawer_done; 
+
+endmodule
+
+
+
+
+// Draws out the title "OP CODES:"
+module opcode_title_drawer(
+	// Standard inputs
+	input wire clock,
+	input wire resetn,
+	output wire [9:0] title_x,	  // 10-bit X coordinate
+   output wire [8:0] title_y,	  // 9-bit Y coordinate
+   output wire [8:0] title_color, // 9-bit color output
+	output wire title_done	  // Flag indicating drawing is complete
+);
+
+    // --- Character Constants (Using your provided indices) ---
+    // C_O = 8'd24, C_P = 8'd25, C_C = 8'd12, C_D = 8'd13, C_E = 8'd14, C_S = 8'd28, C_COL = 8'd36
+    
+	// Spelling out title "OP CODES:"
+    wire [7:0] title[0:8]; // 9-character title
+    assign title[0] = 8'd24; // O
+    assign title[1] = 8'd25; // P
+    assign title[2] = 8'd37; // Space
+    assign title[3] = 8'd12; // C
+    assign title[4] = 8'd24; // O
+    assign title[5] = 8'd13; // D
+    assign title[6] = 8'd14; // E
+    assign title[7] = 8'd28; // S
+    assign title[8] = 8'd36; // :
+
+    // Keeps track of drawing logic 
+    parameter max_chars = 9;
+    wire char_drawer_done;
+    wire [5:0] char_idx; // 0 -> 8
+    wire [2:0] pixel_x;	 // 0 -> 7 for character width
+    wire [2:0] pixel_y;	 // 0 -> 7 for character height
+
+    // Instantiate Character Drawer Logic
+    char_drawer_logic cdl_inst (
+        .clock(clock), 
+        .resetn(resetn), 
+        .char_count(max_chars), 
+        .done(char_drawer_done), 
+        .char_idx(char_idx), 
+        .pixel_x(pixel_x), 
+        .pixel_y(pixel_y)
+    );
+
+    // Instantiate Character Bitmap Lookup
+    wire [63:0] pixelLine;
+    character bmp_inst (
+        .digit(title[char_idx]),
+        .pixelLine(pixelLine)
+    );
+
+    // --- Coordinates ---
+    // Starting X position for the title (Centered / near the instruction list)
+    localparam START_X = 450; 
+    // Starting Y position for the title (Near the top)
+    localparam START_Y = 10; 
+    
+    // Each character is 8 pixels wide, with 1 pixel spacing (9 total step)
+    assign title_x = START_X + (char_idx * 9) + pixel_x; 
+    assign title_y = START_Y + pixel_y;
+
+    // --- Color Output ---
+    // Extract the bit for the current pixel (row/column)
+    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire pixel_on = current_row[7 - pixel_x];
+    
+    // Output bright white color for the title
+    assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
+
+    // Final analysis for if drawing is done
+    assign title_done = char_drawer_done; 
+
+endmodule
+
+
+
+module one_second_timer(
+    input wire clock,
+    input wire resetn,
+    output reg enable_pulse
+);
+
+    // Assuming a 50 MHz clock (20 ns period)
+    // 1 second / 20 ns = 50,000,000 clock cycles.
+    localparam CLOCK_FREQ_HZ = 50_000_000;
+    localparam TARGET_DELAY_SECONDS = 1; // Changed from 5
+    localparam MAX_COUNT = CLOCK_FREQ_HZ * TARGET_DELAY_SECONDS;
+    
+    // Register size needed: log2(50,000,000) is approx 25.5, so use 26 bits.
+    reg [25:0] counter;
+
+    // --- Counter Logic ---
+    always @(posedge clock or negedge resetn) begin
+        if (!resetn) begin
+            counter <= 26'd0;
+            enable_pulse <= 1'b0;
+        end else begin
+            if (counter == MAX_COUNT - 1) begin
+                // Hit the max count, reset and pulse enable high for one cycle
+                counter <= 26'd0;
+                enable_pulse <= 1'b1;
+            end else begin
+                // Increment the counter
+                counter <= counter + 1'b1;
+                // Keep the pulse low, unless it was just set high
+                enable_pulse <= 1'b0;
+            end
+        end
+    end
+
+endmodule
+
+
+// Instruction Log Drawer - Displays WB stage instructions as a scrolling log
+// Shows last 10 instructions with the latest in red, older ones in white
+// When log is full, new instructions overwrite oldest ones
+module instruction_log_drawer(clock, resetn, WB_instruction, WB_valid, log_x, log_y, log_color, log_done);
+	// Inputs
+	input clock;
+	input resetn;
+	input [31:0] WB_instruction; // 32-bit instruction from WB stage
+	input WB_valid; // Pulsed high when new instruction enters WB
+	
+	// Outputs
+	output wire [9:0] log_x;
+	output wire [8:0] log_y;
+	output wire [8:0] log_color;
+	output wire log_done;
+	
+	// ===== CIRCULAR BUFFER FOR INSTRUCTION LOG =====
+	reg [31:0] instruction_buffer [num_instructions:0]; // Stores last 10 instructions (0 = oldest, 9 = newest)
+	reg [3:0] buffer_head; // Points to next write location (0-9)
+	reg [3:0] current_instr_idx; // Index of current instruction being drawn
+	
+	integer i;
+	
+	// Initialize buffer
+	initial begin
+		for (i = 0; i < num_instructions; i = i + 1) begin
+			instruction_buffer[i] = 32'h00000000;
+		end
+		buffer_head = 4'd0;
+	end
+	
+	// ===== UPDATE BUFFER WHEN NEW INSTRUCTION ARRIVES =====
+	always @(posedge clock or negedge resetn) begin
+		if (!resetn) begin
+			buffer_head <= 4'd0;
+			for (i = 0; i < num_instructions; i = i + 1) begin
+				instruction_buffer[i] <= 32'h00000000;
+			end
+		end else if (WB_valid) begin
+			// Store new instruction at head position
+			instruction_buffer[buffer_head] <= WB_instruction;
+			
+			// Increment head (circular)
+			if (buffer_head == 4'd9) begin
+				buffer_head <= 4'd0;
+			end else begin
+				buffer_head <= buffer_head + 1'b1;
+			end
+		end
+	end
+	
+	// ===== CHARACTER DRAWING LOGIC =====
+	// Each instruction displays as: "► XXXXXXXX" (16 chars per row)
+	
+	parameter chars_per_instruction = 16; // "►" (1 char) + space (1) + 8 hex (8) + 6 spaces = 16 total
+	parameter num_instructions = 22;
+	parameter max_chars = chars_per_instruction * num_instructions; // 16 * 18
+	
+	wire char_drawer_done;
+	wire [9:0] char_idx; // 0->159
+	wire [2:0] pixel_x; // 0->7
+	wire [2:0] pixel_y; // 0->7
+	
+	char_drawer_logic cdl_inst (
+		.clock(clock),
+		.resetn(resetn),
+		.char_count(max_chars),
+		.done(char_drawer_done),
+		.char_idx(char_idx),
+		.pixel_x(pixel_x),
+		.pixel_y(pixel_y)
+	);
+	
+	// Determine which instruction row and character position
+	wire [4:0] instr_row = char_idx / chars_per_instruction; // 0-9 (which instruction row)
+	wire [4:0] char_in_instr = char_idx % chars_per_instruction; // 0-15 (position within row)
+	
+	// Get the instruction to display (accounting for circular buffer)
+	// Row 0 = oldest, Row 9 = newest
+	wire [3:0] buffer_idx = (buffer_head + instr_row) % 10; // Map row to buffer position
+	wire [31:0] display_instruction = instruction_buffer[buffer_idx];
+	
+	// Determine if this is the newest instruction (red) or older (white)
+	wire is_newest = (instr_row == num_instructions - 1);
+	
+	// Build character code for current position
+	wire [7:0] char_code;
+	
+	always @(*) begin
+		case (char_in_instr)
+			// Position 0: Arrow () for newest, space for others
+			0: char_code = is_newest ? 8'd39 : 8'd37; // 39 = ►, 37 = space
+			// Position 1: Space
+			1: char_code = 8'd37;
+			
+			// Positions 2-9: 8 hex digits of instruction
+			2: char_code = hex_to_char(display_instruction[31:28]);
+			3: char_code = hex_to_char(display_instruction[27:24]);
+			4: char_code = hex_to_char(display_instruction[23:20]);
+			5: char_code = hex_to_char(display_instruction[19:16]);
+			6: char_code = hex_to_char(display_instruction[15:12]);
+			7: char_code = hex_to_char(display_instruction[11:8]);
+			8: char_code = hex_to_char(display_instruction[7:4]);
+			9: char_code = hex_to_char(display_instruction[3:0]);
+			
+			// Positions 10-15: Padding spaces
+			10, 11, 12, 13, 14, 15: char_code = 8'd37;
+			
+			default: char_code = 8'd37;
+		endcase
+	end
+	
+	// Function to convert 4-bit hex to character code
+	function [7:0] hex_to_char(input [3:0] hex_digit);
+		begin
+			if (hex_digit < 10) begin
+				hex_to_char = 8'd0 + hex_digit; // 0-9
+			end else begin
+				hex_to_char = 8'd10 + (hex_digit - 10); // A-F
+			end
+		end
+	endfunction
+	
+	// Get character bitmap
+	wire [63:0] pixelLine;
+	character bmp_inst (
+		.digit(char_code),
+		.pixelLine(pixelLine)
+	);
+	
+	// Position on screen
+	// Start at X=200, Y=150, each instruction row 15 pixels apart
+	assign log_x = 215 + (char_in_instr * 9) + pixel_x;
+	assign log_y = 150 + (instr_row * 15) + pixel_y;
+	
+	// Color: Red for newest (is_newest), white for others
+	wire pixel_on = pixelLine[pixel_y * 8 + (7-pixel_x)]; // Correct bit selection
+	
+	// Color assignment: Red for newest, white for older
+	assign log_color = pixel_on ? (is_newest ? 9'b110000000 : 9'b111111111) : 9'b000000000;
+	
+	// Done signal
+	assign log_done = char_drawer_done;
+
+endmodule
 
 // Draws out the title above the register
 module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
@@ -572,7 +830,7 @@ module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title
     );
 
     // Each character is 8 pixels wide, with 1 pixel spacing
-    assign title_x = 200 + (char_idx * 9) + pixel_x; 
+    assign title_x = 230 + (char_idx * 9) + pixel_x; 
     assign title_y = 10 + pixel_y; // vertical base
 
     wire [7:0] pixels [7:0];
@@ -898,7 +1156,7 @@ module pc_ir_drawer(clock, resetn, PC_value, IR_value, pc_ir_x, pc_ir_y, pc_ir_c
 	// Each character is 8 pixels wide, with 1 pixel spacing
 	// PC line at Y=150, IR line at Y=165
 	assign pc_ir_x = 10 + (char_in_line * 9) + pixel_x;
-	assign pc_ir_y = 250 + (line_num * 15) + pixel_y;
+	assign pc_ir_y = 200 + (line_num * 15) + pixel_y;
 	
 	// Decode pixel data
 	wire [7:0] pixels [7:0];
@@ -919,258 +1177,224 @@ module pc_ir_drawer(clock, resetn, PC_value, IR_value, pc_ir_x, pc_ir_y, pc_ir_c
 
 endmodule
 
-//
-//module pipeline_drawer(clock, resetn, IF_PC_VALUE, ID_VAL_A, EX_ALU_RESULT, MEM_DATA_OUT, WB_DATA_IN, pipeline_x, pipeline_y, pipeline_color, pipeline_done); 
-//	input clock;  
-//    input resetn; 
-//    
-//    // Data from control unit (example registers)
-//    input [31:0] IF_PC_VALUE; 
-//    input [31:0] ID_VAL_A; 
-//    input [31:0] EX_ALU_RESULT;
-//    input [31:0] MEM_DATA_OUT;
-//    input [31:0] WB_DATA_IN;
-//    
-//    // VGA output coordinates and color
-//    output wire [9:0] pipeline_x;    // 10-bit X coordinate
-//    output wire [8:0] pipeline_y;    // 9-bit Y coordinate
-//    output wire [8:0] pipeline_color; // 9-bit color output
-//    output wire pipeline_done; // Set high when all drawing is complete
-//
-//	 // Drawing parameters
-//	 localparam NUM_STAGES = 5;
-//    localparam LABEL_WIDTH = 5; // e.g., "IF://"
-//    localparam DATA_WIDTH = 8;  // 8 hex digits DATA_WIDTH(32 bits)
-//    localparam CHARS_PER_LINE = LABEL_WIDTH + DATA_WIDTH; // 13
-//    localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE; // 65
-//    
-//    localparam START_X = 200;
-//    localparam START_Y = 25;
-//    localparam CHAR_SPACING = 9; // 8 pixels + 1 spacing
-//    localparam LINE_HEIGHT = 10; // 8 pixels + 2 spacing
-//    
-//    localparam LABEL_COLOR = 9'b111000000; // Bright Red
-//    localparam DATA_COLOR  = 9'b000111000; // Bright Green
-//    localparam BACKGROUND_COLOR = 9'b000000000; // Black
-//	
-//    // Wires from Character Logic ---
-//    wire char_drawer_done;
-//    wire [7:0] char_idx; // Needs to be wide enough for MAX_CHARS (55)
-//    wire [2:0] pixel_x;
-//    wire [2:0] pixel_y;
-//    
-//    // Drawing State Variables
-//    wire [2:0] stage_index; // Current stage being drawn (0 to 4)
-//    wire [3:0] char_line_idx; // Current char position within the 11-char line (0 to 10)
-//    wire [31:0] current_value; // The 32-bit value being displayed
-//    
-//    // Stage Index and Character Position
-//    assign stage_index = char_idx / CHARS_PER_LINE; // 0-IF, 1-ID, 2-EX, 3-MEM, 4-WB
-//    assign char_line_idx = char_idx % CHARS_PER_LINE; // 0-2 for label, 3-10 for data
-//
-//    // Instantiate drawing logic 
-//    char_drawer_logic cdl_inst (
-//        .clock(clock), 
-//        .resetn(resetn), 
-//        .char_count(MAX_CHARS), 
-//        .done(char_drawer_done), 
-//        .char_idx(char_idx), 
-//        .pixel_x(pixel_x), 
-//        .pixel_y(pixel_y)
-//    );
-//
-//	// Connect done signal
-//    assign pipeline_done = char_drawer_done;
-//
-//    // Select the 32-bit value corresponding to the current drawing stage
-//    always @(*) begin
-//        case (stage_index)
-//            3'd0: current_value = IF_PC_VALUE;
-//            3'd1: current_value = ID_VAL_A;
-//            3'd2: current_value = EX_ALU_RESULT;
-//            3'd3: current_value = MEM_DATA_OUT;
-//            3'd4: current_value = WB_DATA_IN;
-//            default: current_value = 32'hDEADBEEF; // Error/Default
-//        endcase
-//    end
-//    
-//    // Stage names: IF, ID, EX, MEM, WB
-//    wire [7:0] stage_labels[0:4][0:4]; // [Stage][Char]
-//	// 5 stages, 4 characters each, 8 
-//    
-//    // Stage 0: IF
-//    assign stage_labels[0][0] = 8'd18; // 'I'
-//    assign stage_labels[0][1] = 8'd15; // 'F'
-//	 assign stage_labels[0][2] = 8'd36; // ':'
-//    assign stage_labels[0][3] = 8'd37; // ' '
-//	 assign stage_labels[0][4] = 8'd37; // ' '
-//    // Stage 1: ID
-//    assign stage_labels[1][0] = 8'd18; // 'I'
-//    assign stage_labels[1][1] = 8'd13; // 'D'
-//	 assign stage_labels[1][2] = 8'd36; // ':'
-//    assign stage_labels[1][3] = 8'd37; // ' '
-//	 assign stage_labels[1][4] = 8'd37; // ' '
-//    
-//	// Stage 2: EX
-//    assign stage_labels[2][0] = 8'd14; // 'E'
-//    assign stage_labels[2][1] = 8'd33; // 'X'
-//    assign stage_labels[2][2] = 8'd36; // ':'
-//	 assign stage_labels[2][3] = 8'd37; // ' '
-//	 assign stage_labels[2][4] = 8'd37; // ' '
-//
-//    // Stage 3: MEM
-//    assign stage_labels[3][0] = 8'd22; // 'M'
-//    assign stage_labels[3][1] = 8'd14; // 'E'
-//    assign stage_labels[3][2] = 8'd22; // 'M'
-//	 assign stage_labels[3][3] = 8'd36; // ':'
-//	 assign stage_labels[3][4] = 8'd37; // ' '
-//    
-//	// Stage 4: WB
-//    assign stage_labels[4][0] = 8'd32; // 'W'
-//    assign stage_labels[4][1] = 8'd11; // 'B'
-//	 assign stage_labels[4][2] = 8'd36; // ':'
-//    assign stage_labels[4][3] = 8'd37; // ' '
-//	 assign stage_labels[4][4] = 8'd37; // ' '
-//	 
-//	 // --- CUSTOM CHARACTER MAPPING CONSTANTS ---
-//    // These match YOUR character module exactly
-//    localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
-//    localparam C_1 = 8'd1;  localparam C_9 = 8'd9;  localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33;
-//    localparam C_2 = 8'd2;  localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
-//    localparam C_3 = 8'd3;  localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
-//    localparam C_4 = 8'd4;  localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28; 
-//    localparam C_5 = 8'd5;  localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; localparam C_COL = 8'd36; // :
-//    localparam C_6 = 8'd6;  localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; localparam C_SP  = 8'd37; // Space
-//    localparam C_7 = 8'd7;  localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; localparam C_PLS = 8'd38; // +
-//
-//    // --- ASSEMBLY DECODING LOGIC ---
-//
-//    // Define 16 columns (128 bits total string width)
-//    wire [7:0] column_values [15:0]; 
-//    wire [31:0] curRegister = register_file[row_idx]; 
-//    
-//    // This wire holds the full 16-character string derived from the function
-//    wire [127:0] assembly_string;
-//    
-//    // Call the function combinatorially
-//    assign assembly_string = get_assembly_string(curRegister);
-//
-//    // Map the big string into the character array
-//    genvar i;
-//    generate
-//        for (i = 0; i < 16; i = i + 1) begin : assign_chars
-//            assign column_values[i] = assembly_string[ (127 - (i*8)) -: 8 ];
-//        end
-//    endgenerate
-//
-//    // --- FUNCTION: Binary to Custom Assembly String ---
-//    function [127:0] get_assembly_string;
-//        input [31:0] inst;
-//        
-//        reg [5:0] opcode;
-//        reg [2:0] r1;
-//        reg [2:0] r2;
-//        reg [15:0] imd;
-//        
-//        reg [7:0] r1_c;
-//        reg [7:0] r2_c;
-//        reg [7:0] h1, h2, h3, h4; 
-//        
-//        begin
-//            // Initialize with spaces
-//            get_assembly_string = {16{C_SP}};
-//            
-//            opcode = inst[31:26];
-//            r1 = inst[25:23]; 
-//            r2 = inst[22:20]; 
-//            imd = inst[15:0]; 
-//            
-//            // Convert Registers indices to characters (0->0, 7->7)
-//            r1_c = hex2char({1'b0, r1}); 
-//            r2_c = hex2char({1'b0, r2});
-//            
-//            // Convert Immediate to characters
-//            h1 = hex2char(imd[15:12]);
-//            h2 = hex2char(imd[11:8]);
-//            h3 = hex2char(imd[7:4]);
-//            h4 = hex2char(imd[3:0]);
-//
-//            case (opcode)
-//                // NOP
-//                6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}};
-//                
-//                // MVW R1, R2 -> M V W _ R 1 _ R 2
-//                6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//                6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//                6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//                
-//                // INC R1
-//                6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}};
-//                
-//                // ADD R1, R2
-//                6'b001001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//                6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//                6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_R, r2_c, {7{C_SP}}};
-//
-//                // ADD R1, #IMD -> A D D _ R 1 _ + H H H H (Using + as #)
-//                6'b101100: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-//                6'b101001: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-//                6'b101010: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {2{C_SP}}};
-//
-//                // LDW R1, *R2
-//                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
-//                6'b010010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, C_R, r2_c, {5{C_SP}}};
-//                
-//                // Memory with Immediate Ptr
-//                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-//                6'b110010: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-//                
-//                // DI1
-//                6'b111001: get_assembly_string = {C_D, C_I, C_1, {13{C_SP}}};
-//                
-//                // EN
-//                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}};
-//                
-//                // Default: UNK HHHH
-//                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
-//            endcase
-//        end
-//    endfunction
-//
-//    // --- Character ROM Input Selection ---
-//    wire [7:0] char_ascii; // ASCII code of the character to draw
-//    
-//    // Determine the character based on whether we are drawing the label (0-2) or the data (3-10)
-//    always @(*) begin
-//        if (char_line_idx < LABEL_WIDTH) begin
-//            // Drawing the Label (Static)
-//            char_ascii = stage_labels[stage_index][char_line_idx];
-//        end else begin
-//            // Drawing the Data (Dynamic Hex)
-//            char_ascii = current_value[(DATA_WIDTH - 1 - (char_line_idx - LABEL_WIDTH)) * 4 +: 4]; // Extract 4 bits
-//        end
-//    end
-//    
-//    // --- Instantiate the Character ROM ---
-//    wire [63:0] pixelLine;
-//    character bmp_inst (
-//        .digit(char_ascii),
-//        .pixelLine(pixelLine)
-//    );
-//
-//    // X/Y Calculation
-//    assign pipeline_x = 200 + (char_line_idx * 9) + pixel_x; 
-//    assign pipeline_y = 25 + (stage_index * 15) + pixel_y; 
-//
-//    // Pixel decoding and Color Assignment
-//    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8]; 
-//    wire pixel_on = current_row[7 - pixel_x];
-//    
-//    assign pipeline_color = pixel_on ? 9'b111111111 : 3'b000;
-//
-//endmodule
 
+module opcode_list_drawer(
+    input wire clock,
+    input wire resetn,
+    output wire [9:0] ref_x,
+    output wire [8:0] ref_y,
+    output wire [8:0] ref_color,
+    output wire ref_done
+);
 
+    // --- Configuration ---
+    localparam START_X = 450;      
+    localparam START_Y = 25;     
+    localparam LINE_HEIGHT = 10;  
+    
+    localparam NUM_LINES = 36; 
+    
+    // Format: "MVW : 01111" = 3 chars + 3 sep + 5 opcode = 11 chars
+    // Let's allocate 12 chars per line for safety/alignment
+    localparam CHARS_PER_LINE = 11; 
+    localparam MAX_CHARS = NUM_LINES * CHARS_PER_LINE;
+
+    // --- Character Constants ---
+    localparam C_A = 8'd10; localparam C_I = 8'd18; localparam C_Q = 8'd26; localparam C_Y = 8'd34;
+    localparam C_B = 8'd11; localparam C_J = 8'd19; localparam C_R = 8'd27; localparam C_Z = 8'd35;
+    localparam C_C = 8'd12; localparam C_K = 8'd20; localparam C_S = 8'd28; 
+    localparam C_D = 8'd13; localparam C_L = 8'd21; localparam C_T = 8'd29; 
+    localparam C_E = 8'd14; localparam C_M = 8'd22; localparam C_U = 8'd30; 
+    localparam C_F = 8'd15; localparam C_N = 8'd23; localparam C_V = 8'd31; 
+    localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
+    localparam C_H = 8'd17; localparam C_P = 8'd25; localparam C_X = 8'd33; 
+    
+    localparam C_0  = 8'd0;  localparam C_1  = 8'd1;  localparam C_2  = 8'd2;
+    localparam C_3  = 8'd3;  localparam C_4  = 8'd4;
+    localparam C_SP = 8'd37; // Space
+    localparam C_COL = 8'd36; // Colon :
+
+    // --- Drawing Logic Wires ---
+    wire char_drawer_done;
+    wire [10:0] char_idx; // Expanded to hold > 255 chars (12 * 39 = 468)
+    wire [2:0] pixel_x;
+    wire [2:0] pixel_y;
+    
+    // State variables
+    wire [5:0] line_idx;      // 0 to 39
+    wire [3:0] char_in_line;  // 0 to 11
+    
+    assign line_idx = char_idx / CHARS_PER_LINE;
+    assign char_in_line = char_idx % CHARS_PER_LINE;
+
+    // Instantiate standard character drawer logic
+    // NOTE: Ensure your char_drawer_logic can handle 11-bit char_count!
+    char_drawer_logic cdl (
+        .clock(clock),
+        .resetn(resetn),
+        .char_count(MAX_CHARS),
+        .done(char_drawer_done),
+        .char_idx(char_idx),
+        .pixel_x(pixel_x),
+        .pixel_y(pixel_y)
+    );
+    
+    assign ref_done = char_drawer_done;
+
+    // --- Opcode Definitions (5 bits: type + operation) ---
+    reg [4:0] opcode_bits;
+    always @(*) begin
+        case (line_idx)
+            // Basic ALU/Move
+            6'd0:  opcode_bits = 5'b00000; // NOP
+            6'd1:  opcode_bits = 5'b01111; // MVW
+            6'd2:  opcode_bits = 5'b01101; // MVL
+            6'd3:  opcode_bits = 5'b01110; // MVU
+            6'd4:  opcode_bits = 5'b01011; // INC
+            6'd5:  opcode_bits = 5'b01001; // ADD
+            6'd6:  opcode_bits = 5'b01010; // SUB
+            6'd7:  opcode_bits = 5'b01100; // MUL
+            
+            // Memory
+            6'd8:  opcode_bits = 5'b10011; // LDW
+            6'd9:  opcode_bits = 5'b10001; // LDL
+            6'd10: opcode_bits = 5'b10010; // LDU
+            6'd11: opcode_bits = 5'b10111; // STW
+            6'd12: opcode_bits = 5'b10101; // STL
+            6'd13: opcode_bits = 5'b10110; // STU
+            
+            // Stage 1 Control
+            6'd14: opcode_bits = 5'b11001; // DI1
+            6'd15: opcode_bits = 5'b11010; // EN1
+            6'd16: opcode_bits = 5'b11011; // PD1
+            6'd17: opcode_bits = 5'b11100; // AM1
+            6'd18: opcode_bits = 5'b11101; // DH1
+            6'd19: opcode_bits = 5'b11110; // DQ1
+            6'd20: opcode_bits = 5'b11111; // DE1
+            
+            // Stage 2 Control
+            6'd21: opcode_bits = 5'b11001; // DI2 (Same opcode base, different channel bits in hardware)
+            6'd22: opcode_bits = 5'b11010; // EN2
+            6'd23: opcode_bits = 5'b11011; // PD2
+            6'd24: opcode_bits = 5'b11100; // AM2
+            6'd25: opcode_bits = 5'b11101; // DH2
+            6'd26: opcode_bits = 5'b11110; // DQ2
+            6'd27: opcode_bits = 5'b11111; // DE2
+            
+            // Stage 3
+            6'd28: opcode_bits = 5'b11001; // DI3
+            6'd29: opcode_bits = 5'b11010; // EN3
+            6'd30: opcode_bits = 5'b11011; // PD3
+            6'd31: opcode_bits = 5'b11100; // AM3
+            
+            // Stage 4
+            6'd32: opcode_bits = 5'b11001; // DI4
+            6'd33: opcode_bits = 5'b11010; // EN4
+            6'd34: opcode_bits = 5'b11011; // PD4
+            6'd35: opcode_bits = 5'b11100; // AM4
+            
+            default: opcode_bits = 5'b00000;
+        endcase
+    end
+
+    // --- Hardcoded Instruction Mnemonic ---
+    reg [7:0] mnemonic_char;
+    
+    always @(*) begin
+        case (line_idx)
+            6'd0:  mnemonic_char = (char_in_line==0)?C_N : (char_in_line==1)?C_O : (char_in_line==2)?C_P : C_SP;
+            6'd1:  mnemonic_char = (char_in_line==0)?C_M : (char_in_line==1)?C_V : (char_in_line==2)?C_W : C_SP;
+            6'd2:  mnemonic_char = (char_in_line==0)?C_M : (char_in_line==1)?C_V : (char_in_line==2)?C_L : C_SP;
+            6'd3:  mnemonic_char = (char_in_line==0)?C_M : (char_in_line==1)?C_V : (char_in_line==2)?C_U : C_SP;
+            6'd4:  mnemonic_char = (char_in_line==0)?C_I : (char_in_line==1)?C_N : (char_in_line==2)?C_C : C_SP;
+            6'd5:  mnemonic_char = (char_in_line==0)?C_A : (char_in_line==1)?C_D : (char_in_line==2)?C_D : C_SP;
+            6'd6:  mnemonic_char = (char_in_line==0)?C_S : (char_in_line==1)?C_U : (char_in_line==2)?C_B : C_SP;
+            6'd7:  mnemonic_char = (char_in_line==0)?C_M : (char_in_line==1)?C_U : (char_in_line==2)?C_L : C_SP;
+            
+            6'd8:  mnemonic_char = (char_in_line==0)?C_L : (char_in_line==1)?C_D : (char_in_line==2)?C_W : C_SP;
+            6'd9:  mnemonic_char = (char_in_line==0)?C_L : (char_in_line==1)?C_D : (char_in_line==2)?C_L : C_SP;
+            6'd10: mnemonic_char = (char_in_line==0)?C_L : (char_in_line==1)?C_D : (char_in_line==2)?C_U : C_SP;
+            6'd11: mnemonic_char = (char_in_line==0)?C_S : (char_in_line==1)?C_T : (char_in_line==2)?C_W : C_SP;
+            6'd12: mnemonic_char = (char_in_line==0)?C_S : (char_in_line==1)?C_T : (char_in_line==2)?C_L : C_SP;
+            6'd13: mnemonic_char = (char_in_line==0)?C_S : (char_in_line==1)?C_T : (char_in_line==2)?C_U : C_SP;
+            
+            // Control Instructions (Displaying Stage Number for clarity: DI1, DI2, etc.)
+            6'd14: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_I : (char_in_line==2)?C_1 : C_SP; // DI1
+            6'd15: mnemonic_char = (char_in_line==0)?C_E : (char_in_line==1)?C_N : (char_in_line==2)?C_1 : C_SP; // EN1
+            6'd16: mnemonic_char = (char_in_line==0)?C_P : (char_in_line==1)?C_D : (char_in_line==2)?C_1 : C_SP; // PD1
+            6'd17: mnemonic_char = (char_in_line==0)?C_A : (char_in_line==1)?C_M : (char_in_line==2)?C_1 : C_SP; // AM1
+            6'd18: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_H : (char_in_line==2)?C_1 : C_SP; // DH1
+            6'd19: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_Q : (char_in_line==2)?C_1 : C_SP; // DQ1
+            6'd20: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_E : (char_in_line==2)?C_1 : C_SP; // DE1
+            
+            6'd21: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_I : (char_in_line==2)?C_2 : C_SP; // DI2
+            6'd22: mnemonic_char = (char_in_line==0)?C_E : (char_in_line==1)?C_N : (char_in_line==2)?C_2 : C_SP; // EN2
+            6'd23: mnemonic_char = (char_in_line==0)?C_P : (char_in_line==1)?C_D : (char_in_line==2)?C_2 : C_SP; // PD2
+            6'd24: mnemonic_char = (char_in_line==0)?C_A : (char_in_line==1)?C_M : (char_in_line==2)?C_2 : C_SP; // AM2
+            6'd25: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_H : (char_in_line==2)?C_2 : C_SP; // DH2
+            6'd26: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_Q : (char_in_line==2)?C_2 : C_SP; // DQ2
+            6'd27: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_E : (char_in_line==2)?C_2 : C_SP; // DE2
+            
+            6'd28: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_I : (char_in_line==2)?C_3 : C_SP; // DI3
+            6'd29: mnemonic_char = (char_in_line==0)?C_E : (char_in_line==1)?C_N : (char_in_line==2)?C_3 : C_SP; // EN3
+            6'd30: mnemonic_char = (char_in_line==0)?C_P : (char_in_line==1)?C_D : (char_in_line==2)?C_3 : C_SP; // PD3
+            6'd31: mnemonic_char = (char_in_line==0)?C_A : (char_in_line==1)?C_M : (char_in_line==2)?C_3 : C_SP; // AM3
+            
+            6'd32: mnemonic_char = (char_in_line==0)?C_D : (char_in_line==1)?C_I : (char_in_line==2)?C_4 : C_SP; // DI4
+            6'd33: mnemonic_char = (char_in_line==0)?C_E : (char_in_line==1)?C_N : (char_in_line==2)?C_4 : C_SP; // EN4
+            6'd34: mnemonic_char = (char_in_line==0)?C_P : (char_in_line==1)?C_D : (char_in_line==2)?C_4 : C_SP; // PD4
+            6'd35: mnemonic_char = (char_in_line==0)?C_A : (char_in_line==1)?C_M : (char_in_line==2)?C_4 : C_SP; // AM4
+            
+            default: mnemonic_char = C_SP;
+        endcase
+    end
+
+    // --- Final Character Selection Logic ---
+    reg [7:0] char_to_draw;
+    
+    always @(*) begin
+        if (char_in_line < 3) begin
+            // First 3 chars: Mnemonic (e.g., "MVW")
+            char_to_draw = mnemonic_char;
+        end else if (char_in_line == 4) begin
+            // 5th char: Colon Separator
+            char_to_draw = C_COL;
+        end else if (char_in_line > 5 && char_in_line < 11) begin
+            // Chars 6-10: Opcode bits (5 bits)
+            // Map char index 6 -> bit 4 (MSB), 7 -> bit 3... 10 -> bit 0 (LSB)
+            if (opcode_bits[10 - char_in_line] == 1'b1) 
+                char_to_draw = C_1;
+            else 
+                char_to_draw = C_0;
+        end else begin
+            // Spaces
+            char_to_draw = C_SP;
+        end
+    end
+
+    // --- Bitmap Instantiation ---
+    wire [63:0] pixelLine;
+    character bmp (
+        .digit(char_to_draw),
+        .pixelLine(pixelLine)
+    );
+
+    // --- Coordinates & Color ---
+    // START_X + char offset
+    assign ref_x = START_X + (char_in_line * 9) + pixel_x;
+    // START_Y + line offset
+    assign ref_y = START_Y + (line_idx * LINE_HEIGHT) + pixel_y;
+    
+    // Decode pixel
+    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire pixel_on = current_row[7 - pixel_x];
+    
+    // Output color: Cyan for text, darker cyan for separator/bits
+    assign ref_color = pixel_on ? 9'b000111111 : 9'b000000000;
+
+endmodule
+
+// Draws out the pipeline registers (in Assembly) 
 module pipeline_drawer(
     input clock,  
     input resetn, 
@@ -1198,7 +1422,7 @@ module pipeline_drawer(
     localparam CHARS_PER_LINE = LABEL_WIDTH + ASM_WIDTH; // 20
     localparam MAX_CHARS = NUM_STAGES * CHARS_PER_LINE;  // 100
     
-    localparam START_X = 200;
+    localparam START_X = 230;
     localparam START_Y = 25;
     
     // --- Custom Character Constants (Based on your character module) ---
@@ -1333,9 +1557,7 @@ module pipeline_drawer(
                             ((char_line_idx < LABEL_WIDTH) ? 9'b111000000 : 9'b000111000) 
                             : 9'b000000000;
 
-    // --- 6. Helper Functions ---
-    
-    // 4-bit Hex to Custom Character Index
+	 // Hex to character conversion 
     function [7:0] hex2char;
         input [3:0] d;
         begin
@@ -1354,6 +1576,7 @@ module pipeline_drawer(
         
         reg [7:0] r1_c, r2_c;
         reg [7:0] h1, h2, h3, h4;
+		  reg [1:0] channel_select; 
         
         begin
             get_assembly_string = {16{C_SP}}; // Default Empty
@@ -1366,23 +1589,33 @@ module pipeline_drawer(
             r1_c = hex2char({1'b0, r1}); 
             r2_c = hex2char({1'b0, r2});
             
-            h1 = hex2char(imd[15:12]); h2 = hex2char(imd[11:8]);
-            h3 = hex2char(imd[7:4]);   h4 = hex2char(imd[3:0]);
+            h1 = hex2char(imd[15:12]); 
+				h2 = hex2char(imd[11:8]);
+            h3 = hex2char(imd[7:4]);   
+				h4 = hex2char(imd[3:0]);
 				
 				op_imm_r1_only = (opcode[5] == 1) ?
                             // Immediate form (e.g., PD1 #FFFF)
                             {C_PLS, h1, h2, h3, h4} :
                             // Register form (e.g., PD1 R1)
                             {C_R, r1_c, {4{C_SP}}};
+									 
+				// 25, 24 are channel 
+				channel_select = inst[25:24];  
 
 
             case (opcode)
-                // --- REG-REG (Bit 31=0, Bit 30=0) ---
+                // ALU commands
                 6'b000000: get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}}; // NOP
                 
+					 // Moves with registers
                 6'b001111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVW R1, R2
                 6'b001101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVL R1, R2
                 6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
+					 
+					 // Immediate value moves
+					 6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVL R1, imd
+                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVU R1, R2
                 
                 6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}}; // INC R1
                 
@@ -1391,159 +1624,243 @@ module pipeline_drawer(
                 6'b001010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // SUB R1, R2
                 6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MUL R1, R2
 
-                // --- IMMEDIATE (Bit 31=1, Bit 30=0) ---
                 // ADD/SUB/MUL (Reg-Imd) -> ADD R1, #FFFF
-                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
-                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}};
+                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // ADD r1, imd
+                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // SUB r1, imd
+                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MUL r1, imd
 
-                // --- MEMORY (Type=1) ---
-                // LDW/STW (Reg Ptr) -> LDW R1, *R2
-                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; // + used as *
-                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+                // LDW (loads) (Reg Ptr) -> LDW R1, *R2
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDW r1, *r2
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDL r1, *r2
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}};  // LDU r1, *r2
                 
-                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
-                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, C_R, r2_c, {4{C_SP}}}; 
+					 // Stores (STW, STL, STU)
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; //  STW r1, *r2
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STL r1, *r2
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STU r1, *r2
 
                 // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
-                // FIX: Added {3{C_SP}} padding to fill the remaining 3 characters of the 16-character width.
-                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-
-                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; 
-
+                6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDW r1, *imd
+                6'b110001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDL r1, *imd
+                6'b110010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDU r1, *imd
+                6'b110111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STW r1, *imd
+                6'b110101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STL r1, *imd
+                6'b110110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // STU r1, *imd
+                
+					 // PDX, registers
+					 6'b011011: begin
+						case (channel_select)
+							2'b00: // PD1
+								get_assembly_string = {C_P, C_D, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD1 R1
+							2'b01: // PD2
+								get_assembly_string = {C_P, C_D, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD2 R1
+							2'b10: // PD3
+								get_assembly_string = {C_P, C_D, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD3 R1
+							2'b11: // PD4
+								get_assembly_string = {C_P, C_D, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD4 R1
+							default:; 
+						endcase
+					 end
+					
+					 // PDX, immediates
+					 6'b111011: begin
+						case (channel_select)
+							2'b00: //  
+								get_assembly_string = {C_P, C_D, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD1 #FFFF
+							2'b01:
+								get_assembly_string = {C_P, C_D, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD2 #FFFF
+							2'b10: 
+								get_assembly_string = {C_P, C_D, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD3 #FFFF
+							2'b11: 
+								get_assembly_string = {C_P, C_D, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD2 #FFFF
+							default:; 
+						endcase
+					 end
+					
+					
+					 // AMX, registers
+                6'b011100: begin 
+						case (channel_select)
+							2'b00:
+								get_assembly_string = {C_A, C_M, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM1 R1
+							2'b01:
+								get_assembly_string = {C_A, C_M, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM2 R1
+							2'b10:
+								get_assembly_string = {C_A, C_M, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM3 R1
+							2'b11:
+								get_assembly_string = {C_A, C_M, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM4 R1
+							default:; 
+						endcase
+					 end
 					 
-					 // Pipeline Stage 1 (Assume next block of opcodes, starting at 6'b111000)
-                // DI1, EN1, PD1, AM1
-                6'b111000: get_assembly_string = {C_D, C_I, C_1, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // DI1 R1, R2
-                6'b111001: get_assembly_string = {C_E, C_N, C_1, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // EN1 R1, R2
-                6'b111010: get_assembly_string = {C_P, C_D, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD1 R1 or PD1 #FFFF
-                6'b111011: get_assembly_string = {C_A, C_M, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM1 R1 or AM1 #FFFF
-
-                // DI2, EN2, PD2, AM2, DH2, DQ2, DE2 (7 instructions)
-                // Need to use the full 6-bit opcode for differentiation. Assuming the DIx, ENx, AMx are R1,R2 type,
-                // and PDx is R1/#IMD type, while DH/DQ/DE are simple instructions (1 operand or none).
-
-                // Assuming R-R format for DIx/ENx/AMx
-                6'b111100: get_assembly_string = {C_D, C_I, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // DI2 R1, R2
-                6'b111101: get_assembly_string = {C_E, C_N, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // EN2 R1, R2
-                6'b111110: get_assembly_string = {C_A, C_M, C_2, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // AM2 R1, R2
-
-                // Assuming R1/#IMD format for PDx
-                6'b111111: get_assembly_string = {C_P, C_D, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD2 R1 or PD2 #FFFF
-
-                // Assuming Simple commands (1 operand R1) for DH/DQ/DE
-                6'b000100: get_assembly_string = {C_D, C_H, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DH2 R1
-                6'b000101: get_assembly_string = {C_D, C_Q, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DQ2 R1
-                6'b000110: get_assembly_string = {C_D, C_E, C_2, C_SP, C_R, r1_c, {10{C_SP}}}; // DE2 R1
-
-                // Pipeline Stage 3 (Assuming simple R1/#IMD format for PD3, AM3)
-                6'b000111: get_assembly_string = {C_P, C_D, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD3 R1 or PD3 #FFFF
-                6'b001000: get_assembly_string = {C_A, C_M, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM3 R1 or AM3 #FFFF
+					 // AMX, immediates
+					 6'b111100: begin 
+						case (channel_select)
+							2'b00:
+								get_assembly_string = {C_A, C_M, C_1, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM1 #FFFF
+							2'b01:
+								get_assembly_string = {C_A, C_M, C_2, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM2 #FFFF
+							2'b10:
+								get_assembly_string = {C_A, C_M, C_3, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM3 #FFFF
+							2'b11:
+								get_assembly_string = {C_A, C_M, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM4 #FFFF
+							default:; 
+						endcase
+					 end
+					 
+					 // DHX
+					 6'b011101: begin 
+						case (channel_select)
+							2'b00: 
+								get_assembly_string = {C_D, C_H, C_1, {13{C_SP}}}; // DH1
+							2'b01:
+								get_assembly_string = {C_D, C_H, C_2, {13{C_SP}}}; // DH2
+							2'b10:
+								get_assembly_string = {C_D, C_H, C_3, {13{C_SP}}}; // DH3
+							2'b11: 
+								get_assembly_string = {C_D, C_H, C_4, {13{C_SP}}}; // DH4
+							default:;
+						endcase
+					end
                 
-                // Pipeline Stage 4 (Assuming simple R1/#IMD format for PD4, AM4, DI4, EN4)
-                6'b001011: get_assembly_string = {C_P, C_D, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // PD4 R1 or PD4 #FFFF
-                6'b001100: get_assembly_string = {C_A, C_M, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // AM4 R1 or AM4 #FFFF
-                6'b001101: get_assembly_string = {C_D, C_I, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // DI4 R1 or DI4 #FFFF
-                6'b001110: get_assembly_string = {C_E, C_N, C_4, C_SP, op_imm_r1_only, {7{C_SP}}}; // EN4 R1 or EN4 #FFFF
-
-                // Special / Unrecognized
-                6'b111010: get_assembly_string = {C_E, C_N, {14{C_SP}}}; // EN (Likely enable all or system enable)
-                
+					// DQX
+					6'b011110: begin
+						case (channel_select)
+							2'b00: 
+								get_assembly_string = {C_D, C_Q, C_1, {13{C_SP}}}; // DQ1
+							2'b01:
+								get_assembly_string = {C_D, C_Q, C_2, {13{C_SP}}}; // DQ2
+							2'b10: 
+								get_assembly_string = {C_D, C_Q, C_3, {13{C_SP}}}; // DQ3
+							2'b11: 
+								get_assembly_string = {C_D, C_Q, C_4, {13{C_SP}}}; // DQ4
+							default:;
+						endcase
+					 end 
+					 
+					 
+					 // DEX
+                6'b011111: begin
+						case (channel_select)
+							2'b00:
+								get_assembly_string = {C_D, C_E, C_1, {13{C_SP}}}; // DE1
+							2'b01: 
+								get_assembly_string = {C_D, C_E, C_2, {13{C_SP}}}; // DE2
+							2'b10: 
+								get_assembly_string = {C_D, C_E, C_3, {13{C_SP}}}; // DE3
+							2'b11: 
+								get_assembly_string = {C_D, C_E, C_4, {13{C_SP}}}; // DE4
+							default:; 
+						endcase
+					 end
+					 
+					 // DIX
+					 6'b011001: begin
+						case (channel_select)
+							2'b00:
+								get_assembly_string = {C_D, C_I, C_1, {13{C_SP}}}; // DI1
+							2'b01: 
+								get_assembly_string = {C_D, C_I, C_2, {13{C_SP}}}; // DI2
+							2'b10: 
+								get_assembly_string = {C_D, C_I, C_3, {13{C_SP}}}; // DI3
+							2'b11: 
+								get_assembly_string = {C_D, C_I, C_4, {13{C_SP}}}; // DI4
+							default:; 
+						endcase
+					 end
+						
                 // Default
                 default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
             endcase
+				
+				
         end
     endfunction
 
 endmodule
 
-
-
-// Draws out the title above the register
+// Draws out the title "REGISTER FILE:" above the register display area.
 module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
 	// Standard inputs
-	input clock; 
-	input resetn; 
-	output wire [9:0] title_x;    // 10-bit X coordinate
-   output wire [8:0] title_y;    // 9-bit Y coordinate
-   output wire [8:0] title_color; // 9-bit color output
-	output wire title_done; 
+	input clock;
+	input resetn;
+	output wire [9:0] title_x;	 // 10-bit X coordinate
+    output wire [8:0] title_y;	 // 9-bit Y coordinate
+    output wire [8:0] title_color; // 9-bit color output
+	output wire title_done;
 
-	// Spelling out title
-	wire [7:0] title[0:16]; // 16-character title
-	assign title[0] = 8'd16; // G
+    // --- Character Constants (Assumed character indices) ---
+    // R=27, E=14, G=16, I=18, S=28, T=29, F=15, L=21, E=14, : = 36, space = 37
+
+	// Spelling out title "REGISTER FILE:"
+	// R E G I S T E R <space> F I L E : (15 characters)
+	wire [7:0] title[0:14];
+	assign title[0] = 8'd27; // R
 	assign title[1] = 8'd14; // E
-	assign title[2] = 8'd23; // N
-	assign title[3] = 8'd14; // E
-	assign title[4] = 8'd27; // R
-	assign title[5] = 8'd10; // A
-	assign title[6] = 8'd21; // L
-	assign title[7] = 8'd37; // space
-	assign title[8] = 8'd27; // R
-	assign title[9] = 8'd14; // E
-	assign title[10] = 8'd16; // G
-	assign title[11] = 8'd18; // I
-	assign title[12] = 8'd28; // S
-	assign title[13] = 8'd29; // T
-	assign title[14] = 8'd14; // E
-	assign title[15] = 8'd27; // R
-	assign title[16] = 8'd28; // S
+	assign title[2] = 8'd16; // G
+	assign title[3] = 8'd18; // I
+	assign title[4] = 8'd28; // S
+	assign title[5] = 8'd29; // T
+	assign title[6] = 8'd14; // E
+	assign title[7] = 8'd27; // R
+	assign title[8] = 8'd37; // Space
+	assign title[9] = 8'd15; // F
+	assign title[10] = 8'd18; // I
+	assign title[11] = 8'd21; // L
+	assign title[12] = 8'd14; // E
+	assign title[13] = 8'd36; // :
+	assign title[14] = 8'd37; // Extra space (just to be safe, length 15)
 
-	// Keeps track of drawing logic 
-	parameter max_chars = 17;
+	// Keeps track of drawing logic
+	parameter max_chars = 15; // R E G I S T E R <space> F I L E :
 	wire char_drawer_done;
-	reg [5:0] char_idx; // 0->16
-	reg [2:0] pixel_x; // 0->7 for character width 
-    reg [2:0] pixel_y; // 0->7 for character height
+	wire [5:0] char_idx; // 0->14
+	wire [2:0] pixel_x; // 0->7 for character width
+    wire [2:0] pixel_y; // 0->7 for character height
+
+    // Note: The original code defined char_idx, pixel_x, and pixel_y as 'reg'
+    // but they are outputs from char_drawer_logic and should typically be 'wire'.
+    // I am correcting this to 'wire' and assuming the char_drawer_logic is instantiated correctly.
 	char_drawer_logic cdl_inst (
-        .clock(clock), 
-        .resetn(resetn), 
-        .char_count(max_chars), 
-        .done(char_drawer_done), 
-        .char_idx(char_idx), 
-        .pixel_x(pixel_x), 
-        .pixel_y(pixel_y)
+        .clock(clock),
+        .resetn(resetn),
+        .char_count(max_chars),
+        .done(char_drawer_done),
+        .char_idx(char_idx), // Now wire
+        .pixel_x(pixel_x),   // Now wire
+        .pixel_y(pixel_y)    // Now wire
     );
-	
+
 	wire [63:0] pixelLine;
 	character bmp_inst (
 		.digit(title[char_idx]),
 		.pixelLine(pixelLine)
 	);
 
-	// Each character is 8 pixels wide, with 1 pixel spacing
-	assign title_x = 10 + (char_idx * 9) + pixel_x; 
-	assign title_y = 10 + pixel_y; // You can set the vertical base
+    // --- Coordinates ---
+	// Start X position is 10 (left side), Y position is 10 (top side)
+	// Each character is 8 pixels wide, with 1 pixel spacing (9 total step)
+	assign title_x = 10 + (char_idx * 9) + pixel_x;
+	assign title_y = 10 + pixel_y;
 
-	wire [7:0] pixels [7:0];
-	assign pixels[0] = pixelLine[7:0];
-	assign pixels[1] = pixelLine[15:8];
-	assign pixels[2] = pixelLine[23:16];
-	assign pixels[3] = pixelLine[31:24];
-	assign pixels[4] = pixelLine[39:32];
-	assign pixels[5] = pixelLine[47:40];
-	assign pixels[6] = pixelLine[55:48];
-	assign pixels[7] = pixelLine[63:56];
-
-	wire pixel_on = pixels[pixel_y][7-pixel_x];
+    // --- Color Output ---
+    // Extract the pixel bit based on pixel_y (row) and pixel_x (column)
+    // The original logic with separate assignments for 'pixels' is overly complex.
+    // The direct lookup from pixelLine is sufficient:
+	wire pixel_on = pixelLine[pixel_y * 8 + (7-pixel_x)]; // Corrected direct lookup logic
 	assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
 	// Final analysis for if drawing is done
-	assign title_done = char_drawer_done; 
-endmodule 
+	assign title_done = char_drawer_done;
+endmodule
+ 
 
 module char_drawer_logic(clock, resetn, char_count, done, char_idx, pixel_x, pixel_y); 
 	input clock; 
     input resetn; 
-    input [7:0] char_count; // Max number 128
+    input [11:0] char_count; // Max number 128
     output reg done;        // Set high when all characters are drawn
-    output reg [6:0] char_idx; // Current character index (0 to CHAR_COUNT-1)
+    output reg [10:0] char_idx; // Current character index (0 to CHAR_COUNT-1)
     output reg [2:0] pixel_x;  // Current pixel column (0 to 7)
     output reg [2:0] pixel_y;   // Current pixel row (0 to 7)
 
@@ -2209,16 +2526,6 @@ module character(digit, pixelLine);
 					pixels[6] = 8'b00011000;
 					pixels[7] = 8'b00010000;
 				end
-//				41: begin // * (Fuzzy Asterisk)
-//					pixels[0] = 8'b10011001; // Row 0
-//					pixels[1] = 8'b01011010; // Row 1
-//					pixels[2] = 8'b00111100; // Row 2
-//					pixels[3] = 8'b11111111; // Row 3
-//					pixels[4] = 8'b11111111; // Row 4
-//					pixels[5] = 8'b00111100; // Row 5
-//					pixels[6] = 8'b01011010; // Row 6
-//					pixels[7] = 8'b10011001; // Row 7
-//				end
 				41: begin //astericks
 					pixels[0] = 8'b00010101;
 					pixels[1] = 8'b00001110;
