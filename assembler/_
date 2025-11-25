@@ -1,78 +1,25 @@
-module noise_generator(
-    input  [31:0] amplitude,      // user amplitude (we use lower 14 bits)
-    input  [31:0] period_cycles,
-    input         CLOCK_50,
-    input         reset,
-    output reg [31:0] channel_audio_out
-);
-    reg [31:0] count_cycles;
+DEPTH = 32768;
+WIDTH = 32;
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
 
-    // keep an internal LFSR state (32-bit)
-    reg [31:0] lfsr_state;
-    wire [31:0] lfsr_next;
-
-    // --- existing cycle counter (unchanged) ---
-    always@(posedge CLOCK_50) begin
-        if (reset | period_cycles == 0)
-            count_cycles <= 0;
-        else begin
-            if (count_cycles < period_cycles - 1) count_cycles <= count_cycles + 1;
-            else count_cycles <= 0;
-        end
-    end
-
-    // --- step the LFSR only when we reach the period boundary ---
-    // keep seed non-zero on reset
-    always @(posedge CLOCK_50) begin
-        if (reset)
-            lfsr_state <= 32'hFFFF_FFFF; // any non-zero seed
-        else if (period_cycles != 0 && count_cycles == period_cycles - 1)
-            lfsr_state <= lfsr_next;     // advance LFSR once per period
-        else
-            lfsr_state <= lfsr_state;
-    end
-
-    // reuse your combinational rng module but feed it the internal state
-    // rng is expected to be combinational (out = f(in))
-    rng rng32(.in(lfsr_state), .out(lfsr_next));
-
-    // --- convert RNG bits to a signed base sample (14-bit) and scale by amplitude ---
-    //
-    // Strategy (minimal, efficient):
-    // - take low 14 bits of lfsr_state as unsigned (0..16383)
-    // - center them around zero: centered = u - 8192  (signed 14-bit range roughly -8192..+8191)
-    // - scale: scaled = (centered * amp14) >>> 13
-    //   where amp14 = amplitude[13:0] (0..16383), shift keeps result within signed 14-bit-ish range
-    // - sign-extend scaled to 32 bits for channel_audio_out
-    //
-    // This gives a perceptually linear-ish amplitude control and needs no external multipliers
-    // beyond the single signed multiply (synthesizable on DSP slices).
-
-    wire [13:0] rand14 = lfsr_state[13:0];               // low 14 bits
-    wire signed [14:0] centered = {1'b0, rand14} - 15'sd8192; // sign-extended subtract
-    wire signed [13:0] amp14 = amplitude[13:0];          // amplitude portion we will use
-
-    // multiply (signed). Result width = 15 + 14 = 29 bits
-    wire signed [28:0] mult_result = centered * $signed({1'b0, amp14});
-
-    // scale down: shift right by 13 to bring back to ~15-bit range (tweakable)
-    wire signed [15:0] scaled16 = mult_result >>> 13; // keeps sign
-
-    // final output: sign-extend to 32 bits (preserve sign)
-    wire signed [31:0] final_out = { {16{scaled16[15]}}, scaled16 };
-
-    // --- produce channel_audio_out at the same timing as before (when period boundary reached) ---
-    always@(posedge CLOCK_50) begin
-        if (period_cycles == 0) begin
-            // preserve the old behavior (when period_cycles==0, you used amplitude directly)
-            channel_audio_out <= amplitude;
-        end else if (count_cycles < period_cycles - 1) begin
-            // hold until the period ticks (same as your original)
-            channel_audio_out <= channel_audio_out;
-        end else begin
-            // on the period boundary, output the newly-scaled noise sample
-            channel_audio_out <= final_out;
-        end
-    end
-
-endmodule
+CONTENT BEGIN
+    0000 : AC000001;                     -- inc r1, 1
+    0001 : AC000002;                     -- inc r1, 2
+    [0002 .. 0009] : 00000000;
+    000A : AC000001;                     -- inc r1, 1
+    000B : AC000002;                     -- inc r1, 2
+    000C : AC000003;                     -- inc r1, 3
+    [000D .. 0013] : 00000000;
+    0014 : AC000001;                     -- inc r1, 1
+    0015 : AC000002;                     -- inc r1, 2
+    0016 : AC000003;                     -- inc r1, 3
+    0017 : AC000004;                     -- inc r1, 4
+    [0018 .. 001D] : 00000000;
+    001E : AC000001;                     -- inc r1, 1
+    001F : AC000002;                     -- inc r1, 2
+    0020 : AC000003;                     -- inc r1, 3
+    0021 : AC000004;                     -- inc r1, 4
+    0022 : AC000005;                     -- inc r1, 5
+    [0023 .. 7FFF] : 00000000;
+END;
