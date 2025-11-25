@@ -172,13 +172,13 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 		.audio_channel_select(audio_channel_select),
 		
 		.id_ex_audio_opcode(id_ex_reg_audio_opcode),
-		.id_ex_audio_channel_select(id_ex_reg_memory_access_code),
+		.id_ex_audio_channel_select(id_ex_reg_audio_channel_select),
       .id_ex_reg_alu_opcode(id_ex_reg_alu_opcode),  
       .id_ex_operand_val1(id_ex_reg_operand_val1), // propogate
       .id_ex_operand_val2(id_ex_reg_operand_val2),// propogate
       .id_ex_regwrite(id_ex_regwrite), // propogate
       .id_ex_reg_wb_enc(id_ex_reg_wb_enc), // propogate
-		.id_ex_wb_data_select_hotcode(id_ex_reg_data_select_hotcode), // propogate
+		.id_ex_reg_wb_data_select_hotcode(id_ex_reg_wb_data_select_hotcode), // propogate
 		.id_ex_memory_access_code(id_ex_reg_memory_access_code), // propogate
 
       .ex_mem_reg_wb_enc(ex_mem_reg_wb_enc), //
@@ -188,7 +188,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
 		// New instructions propogating
 		.ex_mem_reg_operand_val1(ex_mem_reg_operand_val1),
 		.ex_mem_reg_operand_val2(ex_mem_reg_operand_val2),
-		.ex_mem_reg_data_select_hotcode(ex_mem_reg_data_select_hotcode),
+		.ex_mem_reg_wb_data_select_hotcode(ex_mem_reg_wb_data_select_hotcode),
 		.ex_mem_reg_memory_access_code(ex_mem_reg_memory_access_code),
 
       .ex_instruct(ex_instruct),
@@ -203,10 +203,11 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [2:0] ex_mem_reg_wb_enc;
   wire [31:0] ex_mem_reg_operand_val1;
   wire [31:0] ex_mem_reg_operand_val2;
-  wire [2:0] ex_mem_reg_data_select_hotcode;
+  wire [2:0] ex_mem_reg_wb_data_select_hotcode;
   wire [4:0] ex_mem_reg_memory_access_code;
   
-  instr_mem instr_mem_inst(
+  
+  instr_mem_inst(
       .clk(clock_pulse),
       .resetn(resetn),
 
@@ -215,15 +216,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .ex_mem_reg_arithmetic_result(ex_mem_reg_arithmetic_result),
 		.ex_mem_reg_operand_val1(ex_mem_reg_operand_val1),
 		.ex_mem_reg_operand_val2(ex_mem_reg_operand_val2),
-		.ex_mem_reg_data_select_hotcode(ex_mem_reg_data_select_hotcode),
+		.ex_mem_reg_wb_data_select_hotcode(ex_mem_reg_wb_data_select_hotcode),
 		.ex_mem_reg_memory_access_code(ex_mem_reg_memory_access_code),
 		
       .mem_wb_reg_wb_enc(mem_wb_reg_wb_enc),
       .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
       .mem_wb_regwrite(mem_wb_regwrite),
 		.mem_wb_reg_memory_wb_data(mem_wb_reg_memory_wb_data), // This 
-		.mem_wb_reg_operand_val2(mem_wb_operand_val2),
-		.mem_wb_reg_data_select_hotcode(mem_wb_reg_data_select_hotcode), 
+		.mem_wb_reg_operand_val2(mem_wb_reg_operand_val2),
+		.mem_wb_reg_wb_data_select_hotcode(mem_wb_reg_wb_data_select_hotcode), 
 
       .mem_instruct(mem_instruct),
       .wb_instruct(wb_instruct)
@@ -239,8 +240,8 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [2:0] mem_wb_reg_wb_enc;
   wire [31:0] mem_wb_reg_arithmetic_result;
   wire [31:0] mem_wb_reg_memory_wb_data;
-  wire [31:0] mem_wb_operand_val2;
-  wire [2:0] mem_wb_reg_data_select_hotcode;
+  wire [31:0] mem_wb_reg_operand_val2;
+  wire [2:0] mem_wb_reg_wb_data_select_hotcode;
   
 
   instr_wb instr_wb_inst(
@@ -253,7 +254,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
       .mem_wb_reg_arithmetic_result(mem_wb_reg_arithmetic_result),
 		.mem_wb_reg_memory_wb_data(mem_wb_reg_memory_wb_data),
 		.mem_wb_reg_operand_val2(mem_wb_reg_operand_val2),
-		.mem_wb_reg_data_select_hotcode(mem_wb_reg_data_select_hotcode),
+		.mem_wb_reg_wb_data_select_hotcode(mem_wb_reg_wb_data_select_hotcode),
 
       .reg_file_write_enable(we),
       .reg_file_register_encoding(r_write_enc),
@@ -450,10 +451,9 @@ module instr_fetch(clk, resetn, stall, if_id_reg, pc_out);
   end
 endmodule
 
-module instr_decode
-(
-	input wire clock,
-	input wire reset,
+module instr_decode(
+	input wire clk,
+	input wire resetn,
 	input wire stall,
 	
 	input wire [31:0] if_id_reg,
@@ -464,7 +464,7 @@ module instr_decode
 	input [31:0] selected_register_value_1, 
 	input [31:0] selected_register_value_2,
 	
-	// Instruction specific opcodesf
+	// Instruction specific opcodes
 	output reg [2:0] alu_opcode,
 	output reg [4:0] memory_access_code,
 	output reg [2:0] audio_opcode,
@@ -487,7 +487,7 @@ module instr_decode
 
 	// breaking down full_instruction
 	wire [31:0] full_instruction   = if_id_reg;
-	wire         immediate_flag    = if_id_reg[31];
+	wire         immediate_flag    = full_instruction[31];
 	wire [1:0]   instruction_type  = full_instruction[30:29];
 	wire [2:0]   operation         = full_instruction[28:26];
 	wire [1:0]   channel_select    = full_instruction[25:24];
@@ -504,8 +504,18 @@ module instr_decode
 	wire is_audio = instruction_type == 2'b11;
 
 	/* Handle instruction specific opcodes */
-	always @(posedge clock, posedge reset) begin
-		if (no_op || reset || stall) begin
+	always @(posedge clk, negedge resetn) begin
+		if (~resetn) begin
+			alu_opcode <= 3'b000;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= 3'b000;	
+		end else
+		if (no_op || stall) begin
+			alu_opcode <= 3'b000;
+			memory_access_code <= 5'b00000;
+			audio_opcode <= 3'b000;	
+		end else
+		if (no_op || stall) begin
 			alu_opcode <= 3'b000;
 			memory_access_code <= 5'b00000;
 			audio_opcode <= 3'b000;	
@@ -535,7 +545,7 @@ module instr_decode
 	end
 		
 	/* Handle operand values */
-	always @(posedge clock) begin
+	always @(posedge clk) begin
 		if (immediate_flag) begin
 			// Case: arithmetic immediate, memory immediate, or move lower immediate (3'b101)
 			if (is_arithmetic || is_memory || (is_move && (operation == 3'b101))) begin
@@ -559,8 +569,7 @@ module instr_decode
 			else if (is_audio && (operation == 3'b110)) begin
 				operand_value1[31:24] <= 8'b0;                       
 				operand_value1[23:8]  <= immediate_value;           
-				operand_value1[
-				]   <= 8'b0;                       
+				operand_value1[7:0]   <= 8'b0;                       
 				operand_value2 <= selected_register_value_2;
 			end
 			// default: immediate_flag set but instruction doesn't match expected patterns
@@ -578,9 +587,11 @@ module instr_decode
 	end
 
 	/* Handle writeback info */
-	always @(posedge clock, posedge reset) begin
+	always @(posedge clk, negedge resetn) begin
 		writeback_register_encoding <= register_select_1;
-		if (reset)
+		if (~resetn)
+			register_writeback_enable <= 2'b00;
+		else if (no_op || stall)
 			register_writeback_enable <= 2'b00;
 		else if (is_move && (operation == 3'b101) /*move lower*/ || is_memory && (operation == 3'b001) /*load lower*/)
 			register_writeback_enable <= 2'b01;
@@ -592,17 +603,19 @@ module instr_decode
 			register_writeback_enable <= 2'b00;
 	end
 
-	always @(posedge clock, posedge reset) writeback_data_select_hotcode <=
+	always @(posedge clk, negedge resetn) writeback_data_select_hotcode <=
 		{
-		is_arithmetic, 
-		is_memory, 
-		is_move, 
+			is_arithmetic, 
+			is_memory, 
+			is_move
 		};
 		
-	always @(posedge clock) audio_channel_select <= channel_select;
+	always @(posedge clk) audio_channel_select <= channel_select;
 
-	always @(posedge clock, posedge reset) begin
-		if (reset)
+	always @(posedge clk, negedge resetn) begin
+		if (~resetn)
+			id_ex_instruction <= 32'd0;
+		else if (stall || no_op)
 			id_ex_instruction <= 32'd0;
 		else
 			id_ex_instruction <= full_instruction;
@@ -610,72 +623,73 @@ module instr_decode
 
 endmodule
 
-module instr_execute(clk, resetn, alu_opcode, alu_reg_val1, alu_reg_val2, alu_result, id_ex_reg_opcode, id_ex_reg_val1, id_ex_reg_val2, id_ex_regwrite, id_ex_reg_wb_enc, ex_mem_reg_wb_enc, ex_mem_regwrite, ex_mem_reg_arithmetic_result, ex_instruct, mem_instruct);
-  input clk;
-  input resetn;
+module instr_execute(
+  input clk,
+  input resetn,
   
   // From ID/EX pipeline
   
-  input [31:0] ex_instruct; 
-  input [1:0] id_ex_regwrite;
-  input [2:0] id_ex_reg_alu_opcode;
-  input [31:0] id_ex_reg_operand_val1;
-  input [31:0] id_ex_reg_operand_val2;
-  input [1:0] id_ex_reg_wb_enc; 
-  input [4:0] id_ex_reg_memory_access_code;
-  input [2:0] id_ex_reg_wb_data_select_hotcode;
-  input [2:0] id_ex_reg_audio_opcode;
-  input [1:0] id_ex_reg_audio_channel_select;
+  input [31:0] ex_instruct, 
+  input [1:0] id_ex_regwrite,
+  input [2:0] id_ex_reg_alu_opcode,
+  input [31:0] id_ex_reg_operand_val1,
+  input [31:0] id_ex_reg_operand_val2,
+  input [1:0] id_ex_reg_wb_enc, 
+  input [4:0] id_ex_reg_memory_access_code,
+  input [2:0] id_ex_reg_wb_data_select_hotcode,
+  input [2:0] id_ex_reg_audio_opcode,
+  input [1:0] id_ex_reg_audio_channel_select,
   
   // EX/MEM Registers
-  output reg [31:0] mem_instruct;
-  output reg [1:0] ex_mem_regwrite;
-  output reg [31:0] ex_mem_reg_arithmetic_result;
-  output reg [2:0] ex_mem_reg_wb_enc;
-  output reg [31:0] ex_mem_reg_operand_val1;
-  output reg [31:0] ex_mem_reg_operand_val2;
-  output reg [2:0] ex_mem_reg_data_select_hotcode;
-  output reg [4:0] ex_mem_reg_memory_access_code;
+  output reg [31:0] mem_instruct,
+  output reg [1:0] ex_mem_regwrite,
+  output reg [31:0] ex_mem_reg_arithmetic_result,
+  output reg [2:0] ex_mem_reg_wb_enc,
+  output reg [31:0] ex_mem_reg_operand_val1,
+  output reg [31:0] ex_mem_reg_operand_val2,
+  output reg [2:0] ex_mem_reg_wb_data_select_hotcode,
+  output reg [4:0] ex_mem_reg_memory_access_code,
+  
+  // Audio Synthesizer Master Interface
+  output [2:0] audio_opcode,
+  output [1:0] audio_channel_select,
+  
+  // ALU interface
+  output [2:0] alu_opcode,
+  output [31:0] alu_reg_val1,
+  output [31:0] alu_reg_val2,
+  input [31:0] alu_result
+  );
   
   
   // To audio unit (combinational - wires)
   assign audio_opcode = id_ex_reg_audio_opcode;
   assign audio_channel_select = id_ex_reg_audio_channel_select;
-  
-  // To ALU (combinational - wires)  
-  output [2:0] alu_opcode;
 
-  output [31:0] alu_reg_val1;
-  output [31:0] alu_reg_val2;
-  
-  // ALU output
-  input [31:0] alu_result;
-  
-  assign alu_opcode = id_ex_reg_opcode;
-  assign alu_reg_val1 = id_ex_reg_val1;
-  assign alu_reg_val2 = id_ex_reg_val2;
+  // To ALU (combinational - wires)
+  assign alu_opcode = id_ex_reg_alu_opcode;
+  assign alu_reg_val1 = id_ex_reg_operand_val1;
+  assign alu_reg_val2 = id_ex_reg_operand_val2;
 
   always @ (posedge clk or negedge resetn) begin
     if (!resetn) begin
 		mem_instruct <= 0;
 		ex_mem_regwrite <= 0;
-		ex_mem_arithmetic_result <= 0;
+		ex_mem_reg_arithmetic_result <= 0;
 		ex_mem_reg_wb_enc <= 0;
 		ex_mem_reg_operand_val1 <= 0;
 		ex_mem_reg_operand_val2 <= 0;
-		ex_mem_reg_data_select_hotcode <= 0;
+		ex_mem_reg_wb_data_select_hotcode <= 0;
 		ex_mem_reg_memory_access_code <= 0;
-		
-		
     end
     else begin
 		mem_instruct <= ex_instruct;
 		ex_mem_regwrite <= id_ex_regwrite;
-		ex_mem_arithmetic_result <= alu_result;
+		ex_mem_reg_arithmetic_result <= alu_result;
 		ex_mem_reg_wb_enc <= id_ex_reg_wb_enc;
 		ex_mem_reg_operand_val1 <= id_ex_reg_operand_val1;
 		ex_mem_reg_operand_val2 <= id_ex_reg_operand_val2;
-		ex_mem_reg_data_select_hotcode <= id_ex_reg_data_select_hotcode;
+		ex_mem_reg_wb_data_select_hotcode <= id_ex_reg_wb_data_select_hotcode;
 		ex_mem_reg_memory_access_code <= id_ex_reg_memory_access_code;
     end
   end
@@ -685,20 +699,20 @@ module instr_mem (
     input  wire        clk,
     input  wire        resetn,
 
-    input  wire        ex_mem_regwrite,//
+    input  wire [1:0]  ex_mem_regwrite,//
     input  wire [2:0]  ex_mem_reg_wb_enc,//
     input  wire [31:0] ex_mem_reg_arithmetic_result,//
     input  wire [31:0] ex_mem_reg_operand_val1,
     input  wire [31:0] ex_mem_reg_operand_val2,
-    input  wire [3:0]  ex_mem_reg_data_select_hotcode,//
-    input  wire [2:0]  ex_mem_reg_memory_access_code,
+    input  wire [2:0]  ex_mem_reg_wb_data_select_hotcode,//
+    input  wire [4:0]  ex_mem_reg_memory_access_code,
 
     output reg  [2:0]  mem_wb_reg_wb_enc,//
     output reg  [31:0] mem_wb_reg_arithmetic_result,//
-    output reg         mem_wb_regwrite,//
+    output reg  [1:0]  mem_wb_regwrite,//
     output wire [31:0] mem_wb_reg_memory_wb_data,
     output reg  [31:0] mem_wb_reg_operand_val2,//
-    output reg  [3:0]  mem_wb_reg_data_select_hotcode,//
+    output reg  [2:0]  mem_wb_reg_wb_data_select_hotcode,//
 
     input  wire [31:0] mem_instruct,//
     output reg  [31:0] wb_instruct,//
@@ -710,7 +724,7 @@ module instr_mem (
 		if (~resetn) begin
 			mem_wb_regwrite <= 0;
 			mem_wb_reg_wb_enc <= 0;
-			mem_wb_reg_data_select_hotcode <= 0;
+			mem_wb_reg_wb_data_select_hotcode <= 0;
 			
 			mem_wb_reg_arithmetic_result <= 0;
 			mem_wb_reg_operand_val2 <= 0;
@@ -720,7 +734,7 @@ module instr_mem (
 		else begin
 			mem_wb_regwrite <= ex_mem_regwrite;
 			mem_wb_reg_wb_enc <= ex_mem_reg_wb_enc;
-			mem_wb_reg_data_select_hotcode <= ex_mem_reg_data_select_hotcode;
+			mem_wb_reg_wb_data_select_hotcode <= ex_mem_reg_wb_data_select_hotcode;
 			
 			mem_wb_reg_arithmetic_result <= ex_mem_reg_arithmetic_result;
 			mem_wb_reg_operand_val2 <= ex_mem_reg_operand_val2;
@@ -759,48 +773,46 @@ module instr_mem (
 	);
 endmodule
 
-
 module instr_wb(
-	input clock,
-	input reset,
+	input clk,
+	input resetn,
 
-	input [31:0] mem_wb_full_instruction,		// For VGA
-	input [1:0] register_writeback_enable,
-	input [2:0] writeback_register_encoding,	// From decode stage
+	input [31:0] wb_instruct,		// For VGA
+	input [1:0] mem_wb_regwrite,
+	input [2:0] mem_wb_reg_wb_enc,	// From decode stage
 	
-	input [31:0] memory_writeback_data,			// From memory stage
-	input [31:0] arithmetic_writeback_data,		// From execute stage
-	input [31:0] move_writeback_data, 			// From decode stage (operand_value_2)
-	input [2:0] writeback_data_select_hotcode,
+	input [31:0] mem_wb_reg_memory_wb_data,			// From memory stage
+	input [31:0] mem_wb_reg_arithmetic_result,		// From execute stage
+	input [31:0] mem_wb_reg_operand_val2, 			// From decode stage (operand_value_2)
+	input [2:0] mem_wb_reg_wb_data_select_hotcode,
 
 	/* Signals to register file for writeback */
 	output reg [1:0] reg_file_write_enable,
 	output reg [2:0] reg_file_register_encoding,
 	output reg [31:0] reg_file_writeback_data,
 	
-	output reg[31:0] wb_full_instruction		// For VGA
+	output reg [31:0] completed_instruction		// For VGA
 );
 
-	parameter [2:0] is_arithmetic = 3'b100,
-					is_memory     = 3'b010,
-					is_move       = 3'b001;
+parameter [2:0] is_arithmetic = 3'b100,
+				is_memory     = 3'b010,
+				is_move       = 3'b001;
 
 
-	always@(posedge clock, posedge reset) begin
-		if (reset) reg_file_write_enable <= 0; else begin
-			case (writeback_data_select_hotcode)
-				is_arithmetic: 	reg_file_writeback_data <= arithmetic_writeback_data;
-				is_memory:		reg_file_writeback_data <= memory_writeback_data;
-				is_move:		reg_file_writeback_data <= move_writeback_data;
-				default:		reg_file_writeback_data <= 0; // unused
-			endcase
-			reg_file_write_enable <= register_writeback_enable;
-			reg_file_register_encoding <= writeback_register_encoding;
-			
-			wb_full_instruction <= mem_wb_full_instruction; // for VGA
-		end 
-	end
-
+always@(posedge clk, negedge resetn) begin
+	if (resetn) reg_file_write_enable <= 0; else begin
+		case (mem_wb_reg_wb_data_select_hotcode)
+			is_arithmetic: 	reg_file_writeback_data <= mem_wb_reg_arithmetic_result;
+			is_memory:		reg_file_writeback_data <= mem_wb_reg_memory_wb_data;
+			is_move:		reg_file_writeback_data <= mem_wb_reg_operand_val2;
+			default:		reg_file_writeback_data <= 0; // unused
+		endcase
+		reg_file_write_enable <= mem_wb_regwrite;
+		reg_file_register_encoding <= mem_wb_reg_wb_enc;
+		
+		completed_instruction <= wb_instruct; // for VGA
+	end 
+end
 endmodule
 
 module HDU(ID_instruct, EX_instruct, MEM_instruct, WB_instruct, stall, out);
@@ -822,13 +834,13 @@ module HDU(ID_instruct, EX_instruct, MEM_instruct, WB_instruct, stall, out);
   wire [2:0] ID_reg2;
   
   wire [2:0] EX_opcode;
-  wire [1:0] EX_reg1; 
+  wire [2:0] EX_reg1; 
 
   wire [2:0] MEM_opcode;
-  wire [1:0] MEM_reg1;
+  wire [2:0] MEM_reg1;
 
   wire [2:0] WB_opcode;
-  wire [1:0] WB_reg1;
+  wire [2:0] WB_reg1;
 
   // have some assigns with the inputs to the wires
   assign ID_opcode = ID_instruct[31:26];
@@ -898,7 +910,6 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
     end
 endmodule
 
-
 module memory_io_unit (
 	/* Inputs are from the execute/memory pipeline register */
 	input [31:0] data_to_store,	// only used when storing: regsiter => memory address
@@ -906,7 +917,7 @@ module memory_io_unit (
 	input [4:0] memory_access_code, // from the op-code: specifies load/store & data size
 	input [31:0] memory_address,	// up to 2^18
 	input clock,			// clock is only used for storing
-	input prev_r,			// used for loading
+	input [1:0] prev_r,			// used for loading
 	/* Output is sent DIRECTLY to writeback module, as a wire */
 	output [31:0] writeback_register_data,	// only used when loading: memory address => register
 	output [1:0] r
@@ -1062,7 +1073,7 @@ module memory_for_vga (
 	input [31:0] data_to_store,
 	input [4:0] memory_access_code, 
 	input [31:0] memory_address,
-	input CLOCK_50,			
+	input clock,			
 	input [1:0] prev_r,	
 	/* Outputs are sent to memory/writeback pipeline register, for memory instructions */
 	output [31:0] writeback_register_data,	// Unused, don't connnect to anything
@@ -1195,7 +1206,7 @@ module memory_for_vga (
 	};
 	
     bram_8_bytes bram0 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[0]),
         .addr(B_address[0]),
         .din(B_data_to_write[0]),
@@ -1204,7 +1215,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram1 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[1]),
         .addr(B_address[1]),
         .din(B_data_to_write[1]),
@@ -1213,7 +1224,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram2 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[2]),
         .addr(B_address[2]),
         .din(B_data_to_write[2]),
@@ -1222,7 +1233,7 @@ module memory_for_vga (
     );
 
     bram_8_bytes bram3 (
-        .clk(~CLOCK_50),
+        .clk(~clock),
         .we(B_write_enable[3]),
         .addr(B_address[3]),
         .din(B_data_to_write[3]),
@@ -1233,6 +1244,9 @@ module memory_for_vga (
 	
 
 endmodule
+
+// simple_sync_bram.v
+// Generic single-port synchronous BRAM model for simulation
 
 module bram_8_bytes (
     input  wire        clk,
