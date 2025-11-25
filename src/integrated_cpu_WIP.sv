@@ -1,10 +1,12 @@
-module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
+module control_unit(SW, LEDR, KEY, HEX5, HEX4, HEX0, HEX1, HEX3, HEX2);
 	  // Hardware I/O
   input [9:0] SW;
   input [2:0] KEY;
   output [9:0] LEDR;
   output [6:0] HEX0;
   output [6:0] HEX1;
+  output [6:0] HEX3;
+  output [6:0] HEX2, HEX5, HEX4;
 
   // Necessary values
   // wire [7:0] instruction_state = SW[7:0]; <- not used, can remove
@@ -19,7 +21,7 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   // Registers
   wire [31:0] IR; // Special purpose
 
-
+  
   // Register file conntrol
   wire [1:0] we; //
   wire [31:0] wdata; 
@@ -34,8 +36,6 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [31:0] R0_val;
   wire [31:0] R1_val;
   
-  wire [31:0] regiser_tracker [7:0]; 
-  output [31:0] register_file [7:0]; 
   //assign register_file = regiser_tracker; 
 
   reg_file reg_file_inst(
@@ -60,8 +60,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   );
 
   // Hex display for register file
-  display_hex display_hex_inst0(R0_val, HEX0);
-  display_hex display_hex_inst1(R1_val, HEX1);
+
+  
+  display_hex display_hex_inst5(pc[3:0], HEX5);
+  display_hex display_hex_inst4({2'b0,we}, HEX4); 
+  display_hex display_hex_inst3({1'b0, r_write_enc}, HEX3);
+  display_hex display_hex_inst2(0, HEX2);  
+  display_hex display_hex_inst1({1'b0, ex_mem_reg_wb_data_select_hotcode}, HEX1);
+  display_hex display_hex_inst0(R0_val, HEX0);  
+  
   
   // Audio control
   wire [2:0] audio_opcode;
@@ -95,15 +102,15 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
     .stall(stall),
     .out(bs)
   );
- 
-
+	wire [14:0] pc;
+	wire [31:0] catheter;
   instr_fetch instr_fetch_inst(
       .clk(clock_pulse),
       .stall(stall),
       .resetn(resetn),
-
+		.catheter(catheter),
       .if_id_reg(if_id_reg),
-		.pc_out(LEDR[1:0])
+		.pc_out(pc)
   );
   
   // IF/ID Registers
@@ -266,10 +273,12 @@ module control_unit(SW, LEDR, KEY, HEX0, HEX1, register_file);
   wire [31:0] completed_instruction;
   
   // Testing decode: 
-  assign LEDR[9:8] = if_id_reg[5:4];
-  assign LEDR[7:6] = ex_instruct[5:4];
-  assign LEDR[5:4] = mem_instruct[5:4];
-  assign LEDR[3:2] = wb_instruct[5:4];
+  assign LEDR[9:8] = if_id_reg[28:26];
+  assign LEDR[7:6] = ex_instruct[28:26];
+  assign LEDR[5:4] = mem_instruct[28:26];
+  assign LEDR[3:2] = wb_instruct[28:26];
+  
+  
 endmodule
 
 module reg_file(clk, resetn, we, r_enc_0, r_enc_1, r_write_enc, reg_out_0, reg_out_1, wdata, R0_val, R1_val); 
@@ -396,17 +405,18 @@ module ALU(opcode, arithmetic_result, register_value_1, register_value_2);
   end
 endmodule
 
-module instr_fetch(clk, resetn, stall, if_id_reg, pc_out);
+module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
   input clk;
   input resetn;
   input stall;
-  output [1:0] pc_out;
-  reg [15:0] pc;				// program counter (new)
+  output [14:0] pc_out;
+  reg [14:0] pc;				// program counter (new)
   output reg [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
-  
+  output [31:0] catheter; assign catheter = instr_rom_out;
+  wire [31:0] instr_rom_out;
   assign pc_out = pc;
   
-  instr_rom instr_rom(
+  instruction_rom instruction_rom(
 	.address(pc),
 	.clock(clk),
 	.data(),
@@ -909,8 +919,6 @@ module display_hex(input [3:0] dig, output [6:0] HEX);
             temp = 7'b1111111;  // display off (invalid input)
     end
 endmodule
-
-
 
 module memory_io_unit (
 	/* Inputs are from the execute/memory pipeline register */
