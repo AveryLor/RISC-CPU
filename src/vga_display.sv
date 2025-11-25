@@ -405,13 +405,6 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		.log_color(log_color), 
 		.log_done(log_done)
   ); 
-	
-	wire pulse; 
-	one_second_timer fst(
-    .clock(CLOCK_50),
-    .resetn(resetn),
-    .enable_pulse(pulse)
-	);
 
 	// Instantiation of the instruction_log_title_drawer module
 	log_title_drawer ltd(
@@ -596,44 +589,6 @@ module opcode_title_drawer(
 
     // Final analysis for if drawing is done
     assign title_done = char_drawer_done; 
-
-endmodule
-
-
-
-module one_second_timer(
-    input wire clock,
-    input wire resetn,
-    output reg enable_pulse
-);
-
-    // Assuming a 50 MHz clock (20 ns period)
-    // 1 second / 20 ns = 50,000,000 clock cycles.
-    localparam CLOCK_FREQ_HZ = 50_000_000;
-    localparam TARGET_DELAY_SECONDS = 1; // Changed from 5
-    localparam MAX_COUNT = CLOCK_FREQ_HZ * TARGET_DELAY_SECONDS;
-    
-    // Register size needed: log2(50,000,000) is approx 25.5, so use 26 bits.
-    reg [25:0] counter;
-
-    // --- Counter Logic ---
-    always @(posedge clock or negedge resetn) begin
-        if (!resetn) begin
-            counter <= 26'd0;
-            enable_pulse <= 1'b0;
-        end else begin
-            if (counter == MAX_COUNT - 1) begin
-                // Hit the max count, reset and pulse enable high for one cycle
-                counter <= 26'd0;
-                enable_pulse <= 1'b1;
-            end else begin
-                // Increment the counter
-                counter <= counter + 1'b1;
-                // Keep the pulse low, unless it was just set high
-                enable_pulse <= 1'b0;
-            end
-        end
-    end
 
 endmodule
 
