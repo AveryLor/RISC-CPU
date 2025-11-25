@@ -10,12 +10,11 @@ module control_unit(SW, LEDR, KEY, HEX5, HEX4, HEX0, HEX1, HEX3, HEX2, register_
 	
 	output [31:0] IR; // Special purpose
 
-	
-	assign if_instruction = if_id_reg;
-	assign id_instruction = ex_instruct;
-	assign ex_instruction = mem_instruct;
-	assign mem_instruction = wb_instruct;
-	assign wb_instruction = completed_instruction;
+	assign if_instruction = catheter;
+	assign id_instruction = if_id_reg;
+	assign ex_instruction = ex_instruct;
+	assign mem_instruction = mem_instruct;
+	assign wb_instruction = wb_instruct;
 	
 	assign pc_for_vga = pc;
 	assign IR = if_id_reg;
@@ -476,7 +475,7 @@ module instr_fetch(clk, resetn, stall, catheter, if_id_reg, pc_out);
   output [14:0] pc_out;
   reg [14:0] pc;	  // program counter (new)
   output reg [31:0] if_id_reg;		// changed to 32 bits. instead of a reg, this is now a wire to a BRAM DataOut reg.
-  output [31:0] catheter; assign catheter = instr_rom_out;
+  output [31:0] catheter; assign catheter = buffer2;
   wire [31:0] instr_rom_out;
   assign pc_out = pc;
   instruction_rom instruction_rom(
