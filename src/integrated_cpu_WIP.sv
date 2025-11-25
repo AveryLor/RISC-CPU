@@ -63,10 +63,10 @@ module control_unit(SW, LEDR, KEY, HEX5, HEX4, HEX0, HEX1, HEX3, HEX2);
 
   
   display_hex display_hex_inst5(pc[3:0], HEX5);
-  display_hex display_hex_inst4({2'b0,we}, HEX4); 
-  display_hex display_hex_inst3({1'b0, r_write_enc}, HEX3);
-  display_hex display_hex_inst2(0, HEX2);  
-  display_hex display_hex_inst1({1'b0, ex_mem_reg_wb_data_select_hotcode}, HEX1);
+  display_hex display_hex_inst4({1'b0, id_ex_reg_wb_data_select_hotcode}, HEX4); 
+  display_hex display_hex_inst3({1'b0, ex_mem_reg_wb_data_select_hotcode}, HEX3);
+  display_hex display_hex_inst2({1'b0, mem_wb_reg_wb_data_select_hotcode}, HEX2);  
+  display_hex display_hex_inst1(4'he, HEX1);
   display_hex display_hex_inst0(R0_val, HEX0);  
   
   
@@ -510,8 +510,10 @@ module instr_decode(
 	wire no_op = instruction_type == 2'b00;
 	wire is_arithmetic = (instruction_type ==  2'b01) && !(operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
 	wire is_move = (instruction_type ==  2'b01) && (operation == 3'b111 || operation == 3'b101 || operation == 3'b110);
-	wire is_memory = instruction_type == 2'b10;
-	wire is_audio = instruction_type == 2'b11;
+	wire is_memory = (instruction_type == 2'b10);
+	wire is_audio = (instruction_type == 2'b11);
+	wire [2:0] data_select_hotcode;
+	assign data_select_hotcode = {is_arithmetic, is_memory, is_move};
 
 	/* Handle instruction specific opcodes */
 	always @(posedge clk, negedge resetn) begin
@@ -612,13 +614,13 @@ module instr_decode(
 		else
 			register_writeback_enable <= 2'b00;
 	end
+	
 
-	always @(posedge clk, negedge resetn) writeback_data_select_hotcode <=
-		{
-			is_arithmetic, 
-			is_memory, 
-			is_move
-		};
+	always @(posedge clk, negedge resetn) begin
+		if (!resetn) writeback_data_select_hotcode <= data_select_hotcode;
+		else writeback_data_select_hotcode <= data_select_hotcode;
+	end
+	
 		
 	always @(posedge clk) audio_channel_select <= channel_select;
 
@@ -720,7 +722,7 @@ module instr_mem (
     output reg  [2:0]  mem_wb_reg_wb_enc,//
     output reg  [31:0] mem_wb_reg_arithmetic_result,//
     output reg  [1:0]  mem_wb_regwrite,//
-    output wire [31:0] mem_wb_reg_memory_wb_data,
+    output reg  [31:0] mem_wb_reg_memory_wb_data,
     output reg  [31:0] mem_wb_reg_operand_val2,//
     output reg  [2:0]  mem_wb_reg_wb_data_select_hotcode,//
 
@@ -815,7 +817,7 @@ always@(posedge clk, negedge resetn) begin
 			is_arithmetic: 	reg_file_writeback_data <= mem_wb_reg_arithmetic_result;
 			is_memory:		reg_file_writeback_data <= mem_wb_reg_memory_wb_data;
 			is_move:		reg_file_writeback_data <= mem_wb_reg_operand_val2;
-			default:		reg_file_writeback_data <= 0; // unused
+			default:		reg_file_writeback_data <= 0;// unused
 		endcase
 		reg_file_write_enable <= mem_wb_regwrite;
 		reg_file_register_encoding <= mem_wb_reg_wb_enc;
