@@ -401,8 +401,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		.log_y(log_y), 
 		.log_color(log_color), 
 		.log_done(log_done),
-		.local_resetn(log_resetn), 
-  ); 
+		.local_resetn(log_resetn)
+   ); 
 	
 
 	// Instantiation of the instruction_log_title_drawer module
@@ -486,27 +486,27 @@ module log_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
         .pixel_y(pixel_y)
     );
 
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst (
         .digit(title[char_idx]),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
-    // Each character is 8 pixels wide, with 1 pixel spacing
+    // Each character is 8 bit_map wide, with 1 pixel spacing
     assign title_x = 230 + (char_idx * 9) + pixel_x; 
     assign title_y = 130 + pixel_y; // vertical base
 
-    wire [7:0] pixels [7:0];
-    assign pixels[0] = pixelLine[7:0];
-    assign pixels[1] = pixelLine[15:8];
-    assign pixels[2] = pixelLine[23:16];
-    assign pixels[3] = pixelLine[31:24];
-    assign pixels[4] = pixelLine[39:32];
-    assign pixels[5] = pixelLine[47:40];
-    assign pixels[6] = pixelLine[55:48];
-    assign pixels[7] = pixelLine[63:56];
+    wire [7:0] bit_map [7:0];
+    assign bit_map[0] = char_row_pixel[7:0];
+    assign bit_map[1] = char_row_pixel[15:8];
+    assign bit_map[2] = char_row_pixel[23:16];
+    assign bit_map[3] = char_row_pixel[31:24];
+    assign bit_map[4] = char_row_pixel[39:32];
+    assign bit_map[5] = char_row_pixel[47:40];
+    assign bit_map[6] = char_row_pixel[55:48];
+    assign bit_map[7] = char_row_pixel[63:56];
 
-    wire pixel_on = pixels[pixel_y][7-pixel_x];
+    wire pixel_on = bit_map[pixel_y][7-pixel_x];
     assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
     // Final analysis for if drawing is done
@@ -527,9 +527,6 @@ module opcode_title_drawer(
    output wire [8:0] title_color, // 9-bit color output
 	output wire title_done	  // Flag indicating drawing is complete
 );
-
-    // --- Character Constants (Using your provided indices) ---
-    // C_O = 8'd24, C_P = 8'd25, C_C = 8'd12, C_D = 8'd13, C_E = 8'd14, C_S = 8'd28, C_COL = 8'd36
     
 	// Spelling out title "OP CODES:"
     wire [7:0] title[0:8]; // 9-character title
@@ -562,10 +559,10 @@ module opcode_title_drawer(
     );
 
     // Instantiate Character Bitmap Lookup
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst (
         .digit(title[char_idx]),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
     // --- Coordinates ---
@@ -574,13 +571,13 @@ module opcode_title_drawer(
     // Starting Y position for the title (Near the top)
     localparam START_Y = 10; 
     
-    // Each character is 8 pixels wide, with 1 pixel spacing (9 total step)
+    // Each character is 8 bit_map wide, with 1 pixel spacing (9 total step)
     assign title_x = START_X + (char_idx * 9) + pixel_x; 
     assign title_y = START_Y + pixel_y;
 
     // --- Color Output ---
     // Extract the bit for the current pixel (row/column)
-    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire [7:0] current_row = char_row_pixel[(pixel_y * 8) +: 8];
     wire pixel_on = current_row[7 - pixel_x];
     
     // Output bright white color for the title
@@ -617,6 +614,7 @@ module instruction_log_drawer(
     localparam START_Y = 150;
     localparam ROW_HEIGHT = 15;
     localparam CHAR_WIDTH = 9;
+	 localparam DATA_WIDTH = 32; 
     
     // --- Custom Character Constants (Copied from pipeline_drawer for decoding) ---
     localparam C_0 = 8'd0;  localparam C_8 = 8'd8;  localparam C_G = 8'd16; localparam C_O = 8'd24; localparam C_W = 8'd32;
@@ -631,11 +629,10 @@ module instruction_log_drawer(
     localparam C_AST = 8'd41;
     
     // --- Instruction Storage (The 22-wide shift register) ---
-    reg [31:0] instruction_log [NUM_LOG_ENTRIES-1:0];
+	 reg [DATA_WIDTH-1:0] instruction_log [0:NUM_LOG_ENTRIES-1];
     integer i;
-
-    // Shift Register Logic
-    always @(posedge clock or negedge resetn) begin
+	
+	always @(posedge WB_valid or negedge resetn) begin
         if (!resetn) begin
             // Reset all entries to NOP (32'h0)
             for (i = 0; i < NUM_LOG_ENTRIES; i = i + 1) begin
@@ -690,10 +687,10 @@ module instruction_log_drawer(
     end
 
     // --- Bitmap & Output ---
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst (
         .digit(char_to_draw),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
     // X/Y Calculation
@@ -701,7 +698,7 @@ module instruction_log_drawer(
     assign log_y = START_Y + (instr_row * ROW_HEIGHT) + pixel_y;
 
     // Pixel decoding
-    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire [7:0] current_row = char_row_pixel[(pixel_y * 8) +: 8];
     wire pixel_on = current_row[7 - pixel_x];
     
     // Color: Bright Green for newest (Row 0), Grey/White for others
@@ -756,10 +753,6 @@ module instruction_log_drawer(
                                 {C_PLS, h1, h2, h3, h4, {5{C_SP}}} : // 6 chars + 5 spaces (to fill 16 total with instruction name)
                                 // Register form (e.g., PD1 R1)
                                 {C_R, r1_c, {8{C_SP}}}; // 2 chars + 8 spaces
-                                
-            // Handle padding for instructions that only use 3 chars + R1/IMD
-            // e.g., ADD R1, R2 is 10 chars, needs 6 spaces.
-            // ADD #FFFF is 11 chars, needs 5 spaces.
             
             
             channel_select = inst[25:24];
@@ -774,6 +767,7 @@ module instruction_log_drawer(
                 6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
                 
                 // Immediate value moves
+					 6'b101111: get_assembly_string = {C_M, C_V, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVW R1, imd
                 6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVL R1, imd
                 6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVU R1, imd
                 
@@ -922,27 +916,27 @@ module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title
         .pixel_y(pixel_y)
     );
 
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst (
         .digit(title[char_idx]),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
-    // Each character is 8 pixels wide, with 1 pixel spacing
+    // Each character is 8 bit_map wide, with 1 pixel spacing
     assign title_x = 230 + (char_idx * 9) + pixel_x; 
     assign title_y = 10 + pixel_y; // vertical base
 
-    wire [7:0] pixels [7:0];
-    assign pixels[0] = pixelLine[7:0];
-    assign pixels[1] = pixelLine[15:8];
-    assign pixels[2] = pixelLine[23:16];
-    assign pixels[3] = pixelLine[31:24];
-    assign pixels[4] = pixelLine[39:32];
-    assign pixels[5] = pixelLine[47:40];
-    assign pixels[6] = pixelLine[55:48];
-    assign pixels[7] = pixelLine[63:56];
+    wire [7:0] bit_map [7:0];
+    assign bit_map[0] = char_row_pixel[7:0];
+    assign bit_map[1] = char_row_pixel[15:8];
+    assign bit_map[2] = char_row_pixel[23:16];
+    assign bit_map[3] = char_row_pixel[31:24];
+    assign bit_map[4] = char_row_pixel[39:32];
+    assign bit_map[5] = char_row_pixel[47:40];
+    assign bit_map[6] = char_row_pixel[55:48];
+    assign bit_map[7] = char_row_pixel[63:56];
 
-    wire pixel_on = pixels[pixel_y][7-pixel_x];
+    wire pixel_on = bit_map[pixel_y][7-pixel_x];
     assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
     // Final analysis for if drawing is done
@@ -1028,10 +1022,10 @@ module memory_title(clock, resetn, vga_x, vga_y, vga_color, done);
     end
 
     // Character bitmap
-    logic [63:0] pixelLine;
+    logic [63:0] char_row_pixel;
     character bmp_inst (
         .digit(char_code),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
     // Map pixel coordinates
@@ -1039,17 +1033,17 @@ module memory_title(clock, resetn, vga_x, vga_y, vga_color, done);
     assign vga_y = 310 + (row_num * 15) + pixel_y;
 
     // Pixel color
-    logic [7:0] pixels [7:0];
-    assign pixels[0] = pixelLine[7:0];
-    assign pixels[1] = pixelLine[15:8];
-    assign pixels[2] = pixelLine[23:16];
-    assign pixels[3] = pixelLine[31:24];
-    assign pixels[4] = pixelLine[39:32];
-    assign pixels[5] = pixelLine[47:40];
-    assign pixels[6] = pixelLine[55:48];
-    assign pixels[7] = pixelLine[63:56];
+    logic [7:0] bit_map [7:0];
+    assign bit_map[0] = char_row_pixel[7:0];
+    assign bit_map[1] = char_row_pixel[15:8];
+    assign bit_map[2] = char_row_pixel[23:16];
+    assign bit_map[3] = char_row_pixel[31:24];
+    assign bit_map[4] = char_row_pixel[39:32];
+    assign bit_map[5] = char_row_pixel[47:40];
+    assign bit_map[6] = char_row_pixel[55:48];
+    assign bit_map[7] = char_row_pixel[63:56];
 
-    assign vga_color = pixels[pixel_y][7-pixel_x] ? 9'b111111111 : 9'b000000000;
+    assign vga_color = bit_map[pixel_y][7-pixel_x] ? 9'b111111111 : 9'b000000000;
 
     // Done signal
     assign done = char_drawer_done;
@@ -1102,10 +1096,6 @@ module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, me
 	// Get current 32-bit memory value for this row
 	wire [31:0] current_mem = memory[row_num];
 	
-	// Build character code for this position
-	// Layout: "00: 00 00 00 00"
-	// Positions: 0-1 = address (FF), 2 = :, 3 = space
-	
 	wire [7:0] char_code;
 	
 	always @(*) begin
@@ -1141,29 +1131,29 @@ module memory_drawer(clock, resetn, memory, memory_x, memory_y, memory_color, me
 	end
 	
 	// Get character bitmap
-	wire [63:0] pixelLine;
+	wire [63:0] char_row_pixel;
 	character bmp_inst (
 		.digit(char_code),
-		.pixelLine(pixelLine)
+		.char_row_pixel(char_row_pixel)
 	);
 	
-	// Each character is 8 pixels wide, with 1 pixel spacing
+	// Each character is 8 bit_map wide, with 1 pixel spacing
 	// Start at X=300, Y=200
 	assign memory_x = 15 + (char_in_row * 9) + pixel_x;
 	assign memory_y = 340 + (row_num * 15) + pixel_y;
 	
 	// Decode pixel data
-	wire [7:0] pixels [7:0];
-	assign pixels[0] = pixelLine[7:0];
-	assign pixels[1] = pixelLine[15:8];
-	assign pixels[2] = pixelLine[23:16];
-	assign pixels[3] = pixelLine[31:24];
-	assign pixels[4] = pixelLine[39:32];
-	assign pixels[5] = pixelLine[47:40];
-	assign pixels[6] = pixelLine[55:48];
-	assign pixels[7] = pixelLine[63:56];
+	wire [7:0] bit_map [7:0];
+	assign bit_map[0] = char_row_pixel[7:0];
+	assign bit_map[1] = char_row_pixel[15:8];
+	assign bit_map[2] = char_row_pixel[23:16];
+	assign bit_map[3] = char_row_pixel[31:24];
+	assign bit_map[4] = char_row_pixel[39:32];
+	assign bit_map[5] = char_row_pixel[47:40];
+	assign bit_map[6] = char_row_pixel[55:48];
+	assign bit_map[7] = char_row_pixel[63:56];
 	
-	wire pixel_on = pixels[pixel_y][7-pixel_x];
+	wire pixel_on = bit_map[pixel_y][7-pixel_x];
 	assign memory_color = pixel_on ? 9'b111111111 : 9'b000000000;
 	
 	// Final analysis for if drawing is done
@@ -1246,29 +1236,29 @@ module pc_ir_drawer(clock, resetn, PC_value, IR_value, pc_ir_x, pc_ir_y, pc_ir_c
 	endfunction
 	
 	// Get character bitmap
-	wire [63:0] pixelLine;
+	wire [63:0] char_row_pixel;
 	character bmp_inst (
 		.digit(char_code),
-		.pixelLine(pixelLine)
+		.char_row_pixel(char_row_pixel)
 	);
 	
-	// Each character is 8 pixels wide, with 1 pixel spacing
+	// Each character is 8 bit_map wide, with 1 pixel spacing
 	// PC line at Y=150, IR line at Y=165
 	assign pc_ir_x = 10 + (char_in_line * 9) + pixel_x;
 	assign pc_ir_y = 200 + (line_num * 15) + pixel_y;
 	
 	// Decode pixel data
-	wire [7:0] pixels [7:0];
-	assign pixels[0] = pixelLine[7:0];
-	assign pixels[1] = pixelLine[15:8];
-	assign pixels[2] = pixelLine[23:16];
-	assign pixels[3] = pixelLine[31:24];
-	assign pixels[4] = pixelLine[39:32];
-	assign pixels[5] = pixelLine[47:40];
-	assign pixels[6] = pixelLine[55:48];
-	assign pixels[7] = pixelLine[63:56];
+	wire [7:0] bit_map [7:0];
+	assign bit_map[0] = char_row_pixel[7:0];
+	assign bit_map[1] = char_row_pixel[15:8];
+	assign bit_map[2] = char_row_pixel[23:16];
+	assign bit_map[3] = char_row_pixel[31:24];
+	assign bit_map[4] = char_row_pixel[39:32];
+	assign bit_map[5] = char_row_pixel[47:40];
+	assign bit_map[6] = char_row_pixel[55:48];
+	assign bit_map[7] = char_row_pixel[63:56];
 	
-	wire pixel_on = pixels[pixel_y][7-pixel_x];
+	wire pixel_on = bit_map[pixel_y][7-pixel_x];
 	assign pc_ir_color = pixel_on ? 9'b111111111 : 9'b000000000;
 	
 	// Final analysis for if drawing is done
@@ -1472,10 +1462,10 @@ module opcode_list_drawer(
     end
 
     // --- Bitmap Instantiation ---
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp (
         .digit(char_to_draw),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
     // --- Coordinates & Color ---
@@ -1485,7 +1475,7 @@ module opcode_list_drawer(
     assign ref_y = START_Y + (line_idx * LINE_HEIGHT) + pixel_y;
     
     // Decode pixel
-    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8];
+    wire [7:0] current_row = char_row_pixel[(pixel_y * 8) +: 8];
     wire pixel_on = current_row[7 - pixel_x];
     
     // Output color: Cyan for text, darker cyan for separator/bits
@@ -1637,10 +1627,10 @@ module pipeline_drawer(
     end
     
     // --- 5. Bitmap & Output ---
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst (
         .digit(char_to_draw),
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
     // X/Y Calculation
@@ -1648,7 +1638,7 @@ module pipeline_drawer(
     assign pipeline_y = START_Y + (stage_index * 15) + pixel_y; 
 
     // Pixel decoding
-    wire [7:0] current_row = pixelLine[(pixel_y * 8) +: 8]; 
+    wire [7:0] current_row = char_row_pixel[(pixel_y * 8) +: 8]; 
     wire pixel_on = current_row[7 - pixel_x];
     
     // Color: Red for Label, Green for Text
@@ -1888,11 +1878,6 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
     output wire [8:0] title_color; // 9-bit color output
 	output wire title_done;
 
-    // --- Character Constants (Assumed character indices) ---
-    // R=27, E=14, G=16, I=18, S=28, T=29, F=15, L=21, E=14, : = 36, space = 37
-
-	// Spelling out title "REGISTER FILE:"
-	// R E G I S T E R <space> F I L E : (15 characters)
 	wire [7:0] title[0:14];
 	assign title[0] = 8'd27; // R
 	assign title[1] = 8'd14; // E
@@ -1915,11 +1900,9 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
 	wire char_drawer_done;
 	wire [5:0] char_idx; // 0->14
 	wire [2:0] pixel_x; // 0->7 for character width
-    wire [2:0] pixel_y; // 0->7 for character height
+   wire [2:0] pixel_y; // 0->7 for character height
 
-    // Note: The original code defined char_idx, pixel_x, and pixel_y as 'reg'
-    // but they are outputs from char_drawer_logic and should typically be 'wire'.
-    // I am correcting this to 'wire' and assuming the char_drawer_logic is instantiated correctly.
+
 	char_drawer_logic cdl_inst (
         .clock(clock),
         .resetn(resetn),
@@ -1930,23 +1913,23 @@ module reg_title_drawer(clock, resetn, title_x, title_y, title_color, title_done
         .pixel_y(pixel_y)    // Now wire
     );
 
-	wire [63:0] pixelLine;
+	wire [63:0] char_row_pixel;
 	character bmp_inst (
 		.digit(title[char_idx]),
-		.pixelLine(pixelLine)
+		.char_row_pixel(char_row_pixel)
 	);
 
     // --- Coordinates ---
 	// Start X position is 10 (left side), Y position is 10 (top side)
-	// Each character is 8 pixels wide, with 1 pixel spacing (9 total step)
+	// Each character is 8 bit_map wide, with 1 pixel spacing (9 total step)
 	assign title_x = 10 + (char_idx * 9) + pixel_x;
 	assign title_y = 10 + pixel_y;
 
     // --- Color Output ---
     // Extract the pixel bit based on pixel_y (row) and pixel_x (column)
-    // The original logic with separate assignments for 'pixels' is overly complex.
-    // The direct lookup from pixelLine is sufficient:
-	wire pixel_on = pixelLine[pixel_y * 8 + (7-pixel_x)]; // Corrected direct lookup logic
+    // The original logic with separate assignments for 'bit_map' is overly complex.
+    // The direct lookup from char_row_pixel is sufficient:
+	wire pixel_on = char_row_pixel[pixel_y * 8 + (7-pixel_x)]; // Corrected direct lookup logic
 	assign title_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
 	// Final analysis for if drawing is done
@@ -1982,10 +1965,10 @@ module char_drawer_logic(clock, resetn, char_count, done, char_idx, pixel_x, pix
                 char_idx <= 0;
             end else begin
 					 done <= 1'b0; 
-                // Iterate through X pixels (0 -> 7)
+                // Iterate through X bit_map (0 -> 7)
                 if (pixel_x == 7) begin 
                     pixel_x <= 0;
-                    // Iterate through Y pixels (0 -> 7)
+                    // Iterate through Y bit_map (0 -> 7)
                     if (pixel_y == 7) begin
                         pixel_y <= 0;
                         // Iterate through characters (0 -> CHAR_COUNT-1)
@@ -2040,7 +2023,6 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
 		  y_coordinate[7] = 130;
     end
 
-    // 1. Pixel Counter/Finished Character Flag
     one_char_counter occ (
         .resetn(resetn), 
         .clock(clock), 
@@ -2048,7 +2030,6 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
         .finishedCharacter(finishedCharacter)
     ); 
 
-    // 2. Character Position Stepper (New name for row_drawer)
     row_drawer rd (
         .clock(clock), 
         .resetn(resetn), 
@@ -2057,7 +2038,6 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
         .col_idx(col_idx)
     ); 
     
-    // 3. Pixel Coordinates Stepper (Runs on every clock cycle)
     // This logic was originally incorrectly placed in row_drawer
     always @(posedge clock or negedge resetn) begin
         if (!resetn) begin
@@ -2102,22 +2082,22 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
     wire [7:0] current_char_code; // Corrected width to 8 bits for char_bitmap input
     assign current_char_code = column_values[col_idx]; // Use col_idx (0-3) to select char code
     
-    wire [63:0] pixelLine;
+    wire [63:0] char_row_pixel;
     character bmp_inst(
         .digit(current_char_code), 
-        .pixelLine(pixelLine)
+        .char_row_pixel(char_row_pixel)
     );
 
-    // Re-organize pixelLine into an array of 8 rows (8 bits each)
-    wire [7:0] pixels [7:0];
-    assign pixels[0] = pixelLine[7:0];
-    assign pixels[1] = pixelLine[15:8];
-    assign pixels[2] = pixelLine[23:16];
-    assign pixels[3] = pixelLine[31:24];
-    assign pixels[4] = pixelLine[39:32];
-    assign pixels[5] = pixelLine[47:40];
-    assign pixels[6] = pixelLine[55:48];
-    assign pixels[7] = pixelLine[63:56];
+    // Re-organize char_row_pixel into an array of 8 rows (8 bits each)
+    wire [7:0] bit_map [7:0];
+    assign bit_map[0] = char_row_pixel[7:0];
+    assign bit_map[1] = char_row_pixel[15:8];
+    assign bit_map[2] = char_row_pixel[23:16];
+    assign bit_map[3] = char_row_pixel[31:24];
+    assign bit_map[4] = char_row_pixel[39:32];
+    assign bit_map[5] = char_row_pixel[47:40];
+    assign bit_map[6] = char_row_pixel[55:48];
+    assign bit_map[7] = char_row_pixel[63:56];
 
 
     // X position: Start at 10, offset by column index * 9, offset by inner pixel x
@@ -2127,10 +2107,10 @@ module register_drawer(clock, resetn, regs_x, regs_y, regs_color, register_file,
     assign regs_y = y_coordinate[row_idx] + pixel_y; 
 
     wire pixel_on;
-    assign pixel_on = pixels[pixel_y][7-pixel_x];
+    assign pixel_on = bit_map[pixel_y][7-pixel_x];
 	 assign regs_color = pixel_on ? 9'b111111111 : 9'b000000000;
 
-	 // Display pixels in white
+	 // Display bit_map in white
     always_ff @(posedge clock or negedge resetn) begin
 		 if (!resetn) begin
 			  register_done <= 0;
@@ -2196,454 +2176,454 @@ endmodule
 
 
 
-module character(digit, pixelLine);
+module character(digit, char_row_pixel);
 	input wire [7:0] digit;
-	output wire [63:0] pixelLine;
-	reg [7:0] pixels [7:0];
+	output wire [63:0] char_row_pixel;
+	reg [7:0] bit_map [7:0];
 	
-	assign pixelLine[7:0] = pixels[0];
-	assign pixelLine[15:8] = pixels[1];
-	assign pixelLine[23:16] = pixels[2];
-	assign pixelLine[31:24] = pixels[3];
-	assign pixelLine[39:32] = pixels[4];
-	assign pixelLine[47:40] = pixels[5];
-	assign pixelLine[55:48] = pixels[6];
-	assign pixelLine[63:56] = pixels[7];
+	assign char_row_pixel[7:0] = bit_map[0];
+	assign char_row_pixel[15:8] = bit_map[1];
+	assign char_row_pixel[23:16] = bit_map[2];
+	assign char_row_pixel[31:24] = bit_map[3];
+	assign char_row_pixel[39:32] = bit_map[4];
+	assign char_row_pixel[47:40] = bit_map[5];
+	assign char_row_pixel[55:48] = bit_map[6];
+	assign char_row_pixel[63:56] = bit_map[7];
 	
 	always @(*) begin
 		case(digit[7:0])
 				 0: begin // 0
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000110;
-					pixels[3] = 8'b10001010;
-					pixels[4] = 8'b10010010;
-					pixels[5] = 8'b10100010;
-					pixels[6] = 8'b11000010;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000110;
+					bit_map[3] = 8'b10001010;
+					bit_map[4] = 8'b10010010;
+					bit_map[5] = 8'b10100010;
+					bit_map[6] = 8'b11000010;
+					bit_map[7] = 8'b01111100;
 				 end
 				 1: begin // 1
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01110000;
-					pixels[2] = 8'b01010000;
-					pixels[3] = 8'b00010000;
-					pixels[4] = 8'b00010000;
-					pixels[5] = 8'b00010000;
-					pixels[6] = 8'b00010000;
-					pixels[7] = 8'b11111110;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01110000;
+					bit_map[2] = 8'b01010000;
+					bit_map[3] = 8'b00010000;
+					bit_map[4] = 8'b00010000;
+					bit_map[5] = 8'b00010000;
+					bit_map[6] = 8'b00010000;
+					bit_map[7] = 8'b11111110;
 				 end
 				 2: begin// 2
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b00000100;
-					pixels[4] = 8'b00001000;
-					pixels[5] = 8'b00010000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b00000100;
+					bit_map[4] = 8'b00001000;
+					bit_map[5] = 8'b00010000;
+					bit_map[6] = 8'b00100000;
+					bit_map[7] = 8'b01111100;
 				 end
 				 3: begin // 3
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111100;
-					pixels[2] = 8'b00000010;
-					pixels[3] = 8'b00000010;
-					pixels[4] = 8'b00111100;
-					pixels[5] = 8'b00000010;
-					pixels[6] = 8'b00000010;
-					pixels[7] = 8'b11111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111100;
+					bit_map[2] = 8'b00000010;
+					bit_map[3] = 8'b00000010;
+					bit_map[4] = 8'b00111100;
+					bit_map[5] = 8'b00000010;
+					bit_map[6] = 8'b00000010;
+					bit_map[7] = 8'b11111100;
 				 end
 				 4: begin // 4
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10001000;
-					pixels[2] = 8'b10001000;
-					pixels[3] = 8'b10001000;
-					pixels[4] = 8'b11111110;
-					pixels[5] = 8'b00001000;
-					pixels[6] = 8'b00001000;
-					pixels[7] = 8'b00001000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10001000;
+					bit_map[2] = 8'b10001000;
+					bit_map[3] = 8'b10001000;
+					bit_map[4] = 8'b11111110;
+					bit_map[5] = 8'b00001000;
+					bit_map[6] = 8'b00001000;
+					bit_map[7] = 8'b00001000;
 				 end
 				 5: begin // 5
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b00000010;
-					pixels[6] = 8'b00000010;
-					pixels[7] = 8'b11111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b00000010;
+					bit_map[6] = 8'b00000010;
+					bit_map[7] = 8'b11111100;
 				 end
 				 6: begin // 6
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b10000010;
+					bit_map[6] = 8'b10000010;
+					bit_map[7] = 8'b01111100;
 				 end
 				 7: begin // 7
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b00000010;
-					pixels[3] = 8'b00000100;
-					pixels[4] = 8'b00001000;
-					pixels[5] = 8'b00010000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b01000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b00000010;
+					bit_map[3] = 8'b00000100;
+					bit_map[4] = 8'b00001000;
+					bit_map[5] = 8'b00010000;
+					bit_map[6] = 8'b00100000;
+					bit_map[7] = 8'b01000000;
 				 end
 				 8: begin // 8
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000010;
-					pixels[3] = 8'b10000010;
-					pixels[4] = 8'b01111100;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000010;
+					bit_map[3] = 8'b10000010;
+					bit_map[4] = 8'b01111100;
+					bit_map[5] = 8'b10000010;
+					bit_map[6] = 8'b10000010;
+					bit_map[7] = 8'b01111100;
 				 end
 				 9: begin // 9
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000010;
-					pixels[3] = 8'b10000010;
-					pixels[4] = 8'b01111110;
-					pixels[5] = 8'b00000010;
-					pixels[6] = 8'b00000010;
-					pixels[7] = 8'b00000010;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000010;
+					bit_map[3] = 8'b10000010;
+					bit_map[4] = 8'b01111110;
+					bit_map[5] = 8'b00000010;
+					bit_map[6] = 8'b00000010;
+					bit_map[7] = 8'b00000010;
 				end
 				10: begin // A
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b10000100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b10000100;
 				 end
 				 11: begin // B
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11110000;
-					pixels[2] = 8'b10001000;
-					pixels[3] = 8'b10001000;
-					pixels[4] = 8'b11111000;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b11111000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11110000;
+					bit_map[2] = 8'b10001000;
+					bit_map[3] = 8'b10001000;
+					bit_map[4] = 8'b11111000;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b11111000;
 				 end
 				 12: begin // C
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111110;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b10000000;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b01111110;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111110;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b10000000;
+					bit_map[5] = 8'b10000000;
+					bit_map[6] = 8'b10000000;
+					bit_map[7] = 8'b01111110;
 				 end
 				 13: begin // D
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b11111000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b10000100;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b11111000;
 				 end
 				 14: begin // E
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b11111110;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b10000000;
+					bit_map[6] = 8'b10000000;
+					bit_map[7] = 8'b11111110;
 				 end
 				 15: begin // F
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b10000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b10000000;
+					bit_map[6] = 8'b10000000;
+					bit_map[7] = 8'b10000000;
 				end
 
 				16: begin // G
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11110000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000010;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b10001110;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11110000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000010;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b10001110;
+					bit_map[5] = 8'b10000010;
+					bit_map[6] = 8'b10000010;
+					bit_map[7] = 8'b01111100;
 				end
 				17: begin // H
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b10000100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b11111100;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b10000100;
 				end
 				18: begin // I
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b00010000;
-					pixels[3] = 8'b00010000;
-					pixels[4] = 8'b00010000;
-					pixels[5] = 8'b00010000;
-					pixels[6] = 8'b00010000;
-					pixels[7] = 8'b01111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b00010000;
+					bit_map[3] = 8'b00010000;
+					bit_map[4] = 8'b00010000;
+					bit_map[5] = 8'b00010000;
+					bit_map[6] = 8'b00010000;
+					bit_map[7] = 8'b01111100;
 				end
 				19: begin // J
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00011110;
-					pixels[2] = 8'b00001000;
-					pixels[3] = 8'b00001000;
-					pixels[4] = 8'b00001000;
-					pixels[5] = 8'b10001000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b01110000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00011110;
+					bit_map[2] = 8'b00001000;
+					bit_map[3] = 8'b00001000;
+					bit_map[4] = 8'b00001000;
+					bit_map[5] = 8'b10001000;
+					bit_map[6] = 8'b10001000;
+					bit_map[7] = 8'b01110000;
 				end
 				20: begin // K
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10001000;
-					pixels[3] = 8'b10010000;
-					pixels[4] = 8'b11100000;
-					pixels[5] = 8'b10010000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b10000100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b10001000;
+					bit_map[3] = 8'b10010000;
+					bit_map[4] = 8'b11100000;
+					bit_map[5] = 8'b10010000;
+					bit_map[6] = 8'b10001000;
+					bit_map[7] = 8'b10000100;
 				end
 
 				21: begin // L
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000000;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b10000000;
-					pixels[4] = 8'b10000000;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b11111100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000000;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b10000000;
+					bit_map[4] = 8'b10000000;
+					bit_map[5] = 8'b10000000;
+					bit_map[6] = 8'b10000000;
+					bit_map[7] = 8'b11111100;
 				end
 				22: begin // M
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000010;
-					pixels[2] = 8'b11000110;
-					pixels[3] = 8'b10101010;
-					pixels[4] = 8'b10010010;
-					pixels[5] = 8'b10000010;
-					pixels[6] = 8'b10000010;
-					pixels[7] = 8'b10000010;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000010;
+					bit_map[2] = 8'b11000110;
+					bit_map[3] = 8'b10101010;
+					bit_map[4] = 8'b10010010;
+					bit_map[5] = 8'b10000010;
+					bit_map[6] = 8'b10000010;
+					bit_map[7] = 8'b10000010;
 				end
 				23: begin // N
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000010;
-					pixels[2] = 8'b11000010;
-					pixels[3] = 8'b10100010;
-					pixels[4] = 8'b10010010;
-					pixels[5] = 8'b10001010;
-					pixels[6] = 8'b10000110;
-					pixels[7] = 8'b10000010;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000010;
+					bit_map[2] = 8'b11000010;
+					bit_map[3] = 8'b10100010;
+					bit_map[4] = 8'b10010010;
+					bit_map[5] = 8'b10001010;
+					bit_map[6] = 8'b10000110;
+					bit_map[7] = 8'b10000010;
 				end
 				24: begin // O
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b10000100;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b01111000;
 				end
 				25: begin // P
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111000;
-					pixels[5] = 8'b10000000;
-					pixels[6] = 8'b10000000;
-					pixels[7] = 8'b10000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b11111000;
+					bit_map[5] = 8'b10000000;
+					bit_map[6] = 8'b10000000;
+					bit_map[7] = 8'b10000000;
 				end
 				26: begin // Q
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10010100;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b01110100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b10000100;
+					bit_map[5] = 8'b10010100;
+					bit_map[6] = 8'b10001000;
+					bit_map[7] = 8'b01110100;
 				end
 				27: begin // R
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111000;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b11111000;
-					pixels[5] = 8'b10010000;
-					pixels[6] = 8'b10001000;
-					pixels[7] = 8'b10000100;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111000;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b11111000;
+					bit_map[5] = 8'b10010000;
+					bit_map[6] = 8'b10001000;
+					bit_map[7] = 8'b10000100;
 				end
 				28: begin // S
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01111100;
-					pixels[2] = 8'b10000000;
-					pixels[3] = 8'b01111100;
-					pixels[4] = 8'b00000100;
-					pixels[5] = 8'b00000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01111100;
+					bit_map[2] = 8'b10000000;
+					bit_map[3] = 8'b01111100;
+					bit_map[4] = 8'b00000100;
+					bit_map[5] = 8'b00000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b01111000;
 				end
 				29: begin // T
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b00100000;
-					pixels[3] = 8'b00100000;
-					pixels[4] = 8'b00100000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b00100000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b00100000;
+					bit_map[3] = 8'b00100000;
+					bit_map[4] = 8'b00100000;
+					bit_map[5] = 8'b00100000;
+					bit_map[6] = 8'b00100000;
+					bit_map[7] = 8'b00100000;
 				end
 				30: begin // U
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b10000100;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b01111000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b10000100;
+					bit_map[5] = 8'b10000100;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b01111000;
 				end
 				31: begin // V
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b10000100;
-					pixels[3] = 8'b10000100;
-					pixels[4] = 8'b10000100;
-					pixels[5] = 8'b01001000;
-					pixels[6] = 8'b00110000;
-					pixels[7] = 8'b00000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b10000100;
+					bit_map[3] = 8'b10000100;
+					bit_map[4] = 8'b10000100;
+					bit_map[5] = 8'b01001000;
+					bit_map[6] = 8'b00110000;
+					bit_map[7] = 8'b00000000;
 				end
 				32: begin // W
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000001;
-					pixels[2] = 8'b10000001;
-					pixels[3] = 8'b10000001;
-					pixels[4] = 8'b10011001;
-					pixels[5] = 8'b10011001;
-					pixels[6] = 8'b10100101;
-					pixels[7] = 8'b10100101;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000001;
+					bit_map[2] = 8'b10000001;
+					bit_map[3] = 8'b10000001;
+					bit_map[4] = 8'b10011001;
+					bit_map[5] = 8'b10011001;
+					bit_map[6] = 8'b10100101;
+					bit_map[7] = 8'b10100101;
 				end
 				33: begin // X
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b01001000;
-					pixels[3] = 8'b00110000;
-					pixels[4] = 8'b00110000;
-					pixels[5] = 8'b01001000;
-					pixels[6] = 8'b10000100;
-					pixels[7] = 8'b00000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b01001000;
+					bit_map[3] = 8'b00110000;
+					bit_map[4] = 8'b00110000;
+					bit_map[5] = 8'b01001000;
+					bit_map[6] = 8'b10000100;
+					bit_map[7] = 8'b00000000;
 				end
 				34: begin // Y
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b10000100;
-					pixels[2] = 8'b01001000;
-					pixels[3] = 8'b00110000;
-					pixels[4] = 8'b00100000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b00100000;
-					pixels[7] = 8'b00100000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b10000100;
+					bit_map[2] = 8'b01001000;
+					bit_map[3] = 8'b00110000;
+					bit_map[4] = 8'b00100000;
+					bit_map[5] = 8'b00100000;
+					bit_map[6] = 8'b00100000;
+					bit_map[7] = 8'b00100000;
 				end
 				35: begin // Z
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b11111110;
-					pixels[2] = 8'b00000100;
-					pixels[3] = 8'b00001000;
-					pixels[4] = 8'b00010000;
-					pixels[5] = 8'b00100000;
-					pixels[6] = 8'b01000000;
-					pixels[7] = 8'b11111110;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b11111110;
+					bit_map[2] = 8'b00000100;
+					bit_map[3] = 8'b00001000;
+					bit_map[4] = 8'b00010000;
+					bit_map[5] = 8'b00100000;
+					bit_map[6] = 8'b01000000;
+					bit_map[7] = 8'b11111110;
 				end
 				36: begin // :
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b01100000;
-					pixels[2] = 8'b01100000;
-					pixels[3] = 8'b00000000;
-					pixels[4] = 8'b00000000;
-					pixels[5] = 8'b01100000;
-					pixels[6] = 8'b01100000;
-					pixels[7] = 8'b00000000;					
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b01100000;
+					bit_map[2] = 8'b01100000;
+					bit_map[3] = 8'b00000000;
+					bit_map[4] = 8'b00000000;
+					bit_map[5] = 8'b01100000;
+					bit_map[6] = 8'b01100000;
+					bit_map[7] = 8'b00000000;					
 				end	
 				37: begin // space (null char)
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00000000;
-					pixels[2] = 8'b00000000;
-					pixels[3] = 8'b00000000;
-					pixels[4] = 8'b00000000;
-					pixels[5] = 8'b00000000;
-					pixels[6] = 8'b00000000;
-					pixels[7] = 8'b00000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00000000;
+					bit_map[2] = 8'b00000000;
+					bit_map[3] = 8'b00000000;
+					bit_map[4] = 8'b00000000;
+					bit_map[5] = 8'b00000000;
+					bit_map[6] = 8'b00000000;
+					bit_map[7] = 8'b00000000;
 				 end
 				38: begin // +
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00001000;
-					pixels[2] = 8'b00001000;
-					pixels[3] = 8'b00001000;
-					pixels[4] = 8'b01111111;
-					pixels[5] = 8'b00001000;
-					pixels[6] = 8'b00001000;
-					pixels[7] = 8'b00001000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00001000;
+					bit_map[2] = 8'b00001000;
+					bit_map[3] = 8'b00001000;
+					bit_map[4] = 8'b01111111;
+					bit_map[5] = 8'b00001000;
+					bit_map[6] = 8'b00001000;
+					bit_map[7] = 8'b00001000;
 				end
 				39: begin // arrow
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00010000;
-					pixels[2] = 8'b00011000;
-					pixels[3] = 8'b00011100;
-					pixels[4] = 8'b11111110;
-					pixels[5] = 8'b00011100;
-					pixels[6] = 8'b00011000;
-					pixels[7] = 8'b00010000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00010000;
+					bit_map[2] = 8'b00011000;
+					bit_map[3] = 8'b00011100;
+					bit_map[4] = 8'b11111110;
+					bit_map[5] = 8'b00011100;
+					bit_map[6] = 8'b00011000;
+					bit_map[7] = 8'b00010000;
 				end
 				40: begin // , (Comma)
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00000000;
-					pixels[2] = 8'b00000000;
-					pixels[3] = 8'b00000000;
-					pixels[4] = 8'b00000000;
-					pixels[5] = 8'b00000000;
-					pixels[6] = 8'b00011000;
-					pixels[7] = 8'b00010000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00000000;
+					bit_map[2] = 8'b00000000;
+					bit_map[3] = 8'b00000000;
+					bit_map[4] = 8'b00000000;
+					bit_map[5] = 8'b00000000;
+					bit_map[6] = 8'b00011000;
+					bit_map[7] = 8'b00010000;
 				end
 				41: begin //astericks
-					pixels[0] = 8'b00010101;
-					pixels[1] = 8'b00001110;
-					pixels[2] = 8'b00011111;
-					pixels[3] = 8'b00001110;
-					pixels[4] = 8'b00010101;
-					pixels[5] = 8'b00000000;
-					pixels[6] = 8'b00000000;
-					pixels[7] = 8'b00000000;
+					bit_map[0] = 8'b00010101;
+					bit_map[1] = 8'b00001110;
+					bit_map[2] = 8'b00011111;
+					bit_map[3] = 8'b00001110;
+					bit_map[4] = 8'b00010101;
+					bit_map[5] = 8'b00000000;
+					bit_map[6] = 8'b00000000;
+					bit_map[7] = 8'b00000000;
 				 end
 				default: begin // space (null char)
-					pixels[0] = 8'b00000000;
-					pixels[1] = 8'b00000000;
-					pixels[2] = 8'b00000000;
-					pixels[3] = 8'b00000000;
-					pixels[4] = 8'b00000000;
-					pixels[5] = 8'b00000000;
-					pixels[6] = 8'b00000000;
-					pixels[7] = 8'b00000000;
+					bit_map[0] = 8'b00000000;
+					bit_map[1] = 8'b00000000;
+					bit_map[2] = 8'b00000000;
+					bit_map[3] = 8'b00000000;
+					bit_map[4] = 8'b00000000;
+					bit_map[5] = 8'b00000000;
+					bit_map[6] = 8'b00000000;
+					bit_map[7] = 8'b00000000;
 				 end
 		endcase
 	end
