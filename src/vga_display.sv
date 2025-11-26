@@ -1,4 +1,4 @@
-module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, PC_value, IR_value, ram);
+module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, if_instruction, id_instruction, ex_instruction, mem_instruction, wb_instruction, pc_for_vga, IR, ram, wb_valid_pulse);
 	// Input ports
 	input CLOCK_50;
 	output [7:0] VGA_R;
@@ -13,12 +13,22 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	wire [8:0] VGA_Y;
 	wire [8:0] VGA_COLOR;
 	input [0:0] KEY;
+	
+	
+	// Displayed values
+	input [31:0] if_instruction;
+	input [31:0] id_instruction;
+	input [31:0] ex_instruction;
+	input [31:0] mem_instruction;
+	input [31:0] wb_instruction;
+	input [14:0] pc_for_vga; 
 	input [31:0] register_file [7:0];
-	input [31:0] PC_value;    // Program Counter input
-	input [31:0] IR_value;    // Instruction Register input
-	wire resetn = KEY[0];
+	input [31:0] IR; // Instruction Register input
 	input [31:0] ram [7:0]; 
-
+	input wb_valid_pulse; 
+	
+	wire resetn = KEY[0];
+	
 	// Control wires for title
 	wire [9:0] title_x, title_y;
 	wire [8:0] title_color;
@@ -288,19 +298,6 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 					: (state == DRAW_LOG) ? log_color
 					: log_title_color;
 	
-	// First command: ADD R1, R2
-	wire [31:0] test_input1 = 32'b00100100000001000000000000000000;  // ADD R1, r1, r5 (for MIPS)
-
-	// Second command: INC R1
-	wire [31:0] test_input2 = 32'b00101000000000010000000000000000;  // SUB R1, R1, R2 (for MIPS)
-	// R1 = 21, 20, 19
-	// R2 = 18, 17, 16
-	
-	wire [31:0] test_input3 = 32'b11001100000110000000000000111010;  // SUB R1, R1, R2 (for MIPS)
-	
-	wire [31:0] test_input4 = 32'b01100110000000000000000000000000;  // SUB R1, R1, R2 (for MIPS)
-	
-	wire [31:0] test_input5 = 32'b11110001000000000011111111111111;  // SUB R1, R1, R2 (for MIPS)
 
 	// Instantiate all drawing modules
 	reg_title_drawer rtd (
@@ -325,11 +322,11 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	pipeline_drawer pd (
 		.clock(CLOCK_50), 
 		.resetn(pipeline_local_resetn), 
-		.IF_PC_VALUE(test_input1), 
-		.ID_VAL_A(test_input2), 
-		.EX_ALU_RESULT(test_input3), 
-		.MEM_DATA_OUT(test_input4), 
-		.WB_DATA_IN(test_input5), 
+		.IF_PC_VALUE(if_instruction), 
+		.ID_VAL_A(id_instruction), 
+		.EX_ALU_RESULT(ex_instruction), 
+		.MEM_DATA_OUT(mem_instruction), 
+		.WB_DATA_IN(wb_instruction), 
 		.pipeline_x(pipeline_x), 
 		.pipeline_y(pipeline_y), 
 		.pipeline_color(pipeline_color), 
@@ -339,8 +336,8 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	pc_ir_drawer pc_ir (
 		.clock(CLOCK_50),
 		.resetn(pc_ir_local_resetn),
-		.PC_value(PC_value),
-		.IR_value(IR_value),
+		.PC_value(pc_for_vga),
+		.IR_value(IR),
 		.pc_ir_x(pc_ir_x),
 		.pc_ir_y(pc_ir_y),
 		.pc_ir_color(pc_ir_color),
@@ -395,16 +392,17 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	.title_done(opcode_title_done)	  // Flag indicating drawing is complete
 	);
 	
- instruction_log_drawer ild(
+   instruction_log_drawer ild(
 		.clock(CLOCK_50),
 		.resetn(log_resetn), 
-		.WB_instruction(32'hAAAAAAAA), 
-		.WB_valid(pulse), 
+		.WB_instruction(wb_instruction), 
+		.WB_valid(wb_valid_pulse), 
 		.log_x(log_x), 
 		.log_y(log_y), 
 		.log_color(log_color), 
 		.log_done(log_done)
   ); 
+	
 
 	// Instantiation of the instruction_log_title_drawer module
 	log_title_drawer ltd(
@@ -436,7 +434,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 		
 	
 	defparam VGA.RESOLUTION = "640x480";
-	defparam VGA.BACKGROUND_IMAGE = "./bmp_640_9.mif"; 
+
 
 endmodule
 
@@ -591,6 +589,7 @@ module opcode_title_drawer(
     assign title_done = char_drawer_done; 
 
 endmodule
+
 
 // Instruction Log Drawer - Displays executed WB stage instructions as a scrolling log
 // It acts as a 22-deep shift register, where the newest instruction is always at index 0 (top).
@@ -880,6 +879,8 @@ module instruction_log_drawer(
     endfunction
     
 endmodule
+
+
 
 // Draws out the title above the register
 module pipeline_title_drawer(clock, resetn, title_x, title_y, title_color, title_done);
@@ -1711,8 +1712,8 @@ module pipeline_drawer(
                 6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
 					 
 					 // Immediate value moves
-					 6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVL R1, imd
-                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVU R1, R2
+					 6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVL R1, imd
+                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVU R1, R2
                 
                 6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}}; // INC R1
                 
@@ -1722,19 +1723,19 @@ module pipeline_drawer(
                 6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MUL R1, R2
 
                 // ADD/SUB/MUL (Reg-Imd) -> ADD R1, #FFFF
-                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // ADD r1, imd
-                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // SUB r1, imd
-                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MUL r1, imd
+                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // ADD r1, imd
+                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // SUB r1, imd
+                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MUL r1, imd
 
                 // LDW (loads) (Reg Ptr) -> LDW R1, *R2
-                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDW r1, *r2
-                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDL r1, *r2
-                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}};  // LDU r1, *r2
+                6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}}; // LDW r1, *r2
+                6'b010001: get_assembly_string = {C_L, C_D, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}}; // LDL r1, *r2
+                6'b010010: get_assembly_string = {C_L, C_D, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}};  // LDU r1, *r2
                 
 					 // Stores (STW, STL, STU)
-                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; //  STW r1, *r2
-                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STL r1, *r2
-                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // STU r1, *r2
+                6'b010111: get_assembly_string = {C_S, C_T, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}}; //  STW r1, *r2
+                6'b010101: get_assembly_string = {C_S, C_T, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}}; // STL r1, *r2
+                6'b010110: get_assembly_string = {C_S, C_T, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {5{C_SP}}}; // STU r1, *r2
 
                 // LDW/STW (Imd Ptr) -> LDW R1, *FFFF
                 6'b110011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, h1, h2, h3, h4, {3{C_SP}}}; // LDW r1, *imd
@@ -1867,7 +1868,7 @@ module pipeline_drawer(
 					 end
 						
                 // Default
-                default:   get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+                default:   get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}};
             endcase
 				
 				
