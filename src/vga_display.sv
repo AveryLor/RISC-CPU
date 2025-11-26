@@ -1,4 +1,4 @@
-module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, if_instruction, id_instruction, ex_instruction, mem_instruction, wb_instruction, pc_for_vga, IR, ram, wb_valid_pulse);
+module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, register_file, if_instruction, id_instruction, ex_instruction, mem_instruction, wb_instruction, pc_for_vga, IR, ram, wb_valid_pulse, derived);
 	// Input ports
 	input CLOCK_50;
 	output [7:0] VGA_R;
@@ -26,7 +26,7 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	input [31:0] IR; // Instruction Register input
 	input [31:0] ram [7:0]; 
 	input wb_valid_pulse; 
-	
+	input derived; 
 	wire resetn = KEY[0];
 	
 	// Control wires for title
@@ -394,13 +394,14 @@ module vga_display(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK
 	
    instruction_log_drawer ild(
 		.clock(CLOCK_50),
-		.resetn(log_resetn), 
+		.resetn(resetn), 
 		.WB_instruction(wb_instruction), 
-		.WB_valid(wb_valid_pulse), 
+		.WB_valid(derived), 
 		.log_x(log_x), 
 		.log_y(log_y), 
 		.log_color(log_color), 
-		.log_done(log_done)
+		.log_done(log_done),
+		.local_resetn(log_resetn), 
   ); 
 	
 
@@ -591,8 +592,7 @@ module opcode_title_drawer(
 endmodule
 
 
-// Instruction Log Drawer - Displays executed WB stage instructions as a scrolling log
-// It acts as a 22-deep shift register, where the newest instruction is always at index 0 (top).
+// Log (basic 22 wide shift register) 
 module instruction_log_drawer(
     input clock,
     input resetn,
@@ -603,7 +603,8 @@ module instruction_log_drawer(
     output wire [9:0] log_x,
     output wire [9:0] log_y,
     output wire [8:0] log_color,
-    output wire log_done
+    output wire log_done,
+	 input local_resetn
 );
 
     // --- Drawing parameters ---
@@ -659,7 +660,7 @@ module instruction_log_drawer(
     
     char_drawer_logic cdl_inst (
         .clock(clock),
-        .resetn(resetn),
+        .resetn(local_resetn),
         .char_count(MAX_CHARS),
         .done(char_drawer_done),
         .char_idx(char_idx),
@@ -773,8 +774,8 @@ module instruction_log_drawer(
                 6'b001110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MVU R1, R2
                 
                 // Immediate value moves
-                6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVL R1, imd
-                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MVU R1, imd
+                6'b101101: get_assembly_string = {C_M, C_V, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVL R1, imd
+                6'b101110: get_assembly_string = {C_M, C_V, C_U, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MVU R1, imd
                 
                 6'b001011: get_assembly_string = {C_I, C_N, C_C, C_SP, C_R, r1_c, {10{C_SP}}}; // INC R1
                 
@@ -784,9 +785,9 @@ module instruction_log_drawer(
                 6'b001100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_R, r2_c, {6{C_SP}}}; // MUL R1, R2
 
                 // ADD/SUB/MUL (Reg-Imd) -> ADD R1, #FFFF
-                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // ADD r1, imd
-                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // SUB r1, imd
-                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {1{C_SP}}}; // MUL r1, imd
+                6'b101001: get_assembly_string = {C_A, C_D, C_D, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // ADD r1, imd
+                6'b101010: get_assembly_string = {C_S, C_U, C_B, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // SUB r1, imd
+                6'b101100: get_assembly_string = {C_M, C_U, C_L, C_SP, C_R, r1_c, C_CM, C_SP, C_PLS, h1, h2, h3, h4, {3{C_SP}}}; // MUL r1, imd
 
                 // LDW (loads) (Reg Ptr) -> LDW R1, *R2
                 6'b010011: get_assembly_string = {C_L, C_D, C_W, C_SP, C_R, r1_c, C_CM, C_SP, C_AST, C_R, r2_c, {4{C_SP}}}; // LDW r1, *r2
@@ -873,7 +874,7 @@ module instruction_log_drawer(
                 end
                     
                 // Default UNK instruction
-                default:    get_assembly_string = {C_U, C_N, C_K, C_SP, hex2char(inst[31:28]), hex2char(inst[27:24]), {10{C_SP}}};
+                default:    get_assembly_string = {C_N, C_O, C_P, {13{C_SP}}};
             endcase
         end
     endfunction
